@@ -40,7 +40,7 @@ func sourceManager(t *testing.T) *Manager {
 	if err := os.WriteFile(filepath.Join(dir, "docker-compose.deploy.yml"), []byte("services: {}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	m, err := NewManager(Config{InstallDir: dir, StateDir: filepath.Join(dir, "state")})
+	m, err := NewManager(Config{InstallDir: dir, StateDir: filepath.Join(dir, "state"), Repository: "ddcat-ai/open-ai-canvas"})
 	if err != nil {
 		t.Fatal(err)
 	}
