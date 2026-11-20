@@ -26,7 +26,7 @@ type CanvasAppearance struct {
 func defaultCanvasAppearance() CanvasAppearance {
 	return CanvasAppearance{
 		AgentName: "造境", LauncherLabel: "Agent", PanelTitle: "画布助手",
-		WelcomeTitle:       "在这里，和{agentName}让灵感，慢慢成形",
+		WelcomeTitle:       "在这里{agentName}，让灵感，慢慢成形",
 		WelcomeDescription: "从一个想法开始，和{agentName}一起创作。",
 		InputPlaceholder:   "输入操作指导；用 @ 引用画布节点，用 / 或 、 引用 Skills",
 		AvatarType:         "bundle",
