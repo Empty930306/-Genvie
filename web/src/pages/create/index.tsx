@@ -1,6 +1,7 @@
 import { workspacePath, workspaceTeamId } from "@/lib/workspace-routes";
 import { captureSkillLibraryAccess, hasSkillLibraryAccess, isSkillLibraryAccessCurrent, useSkillLibraryAccess } from "@/lib/skill-access";
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { App, Button, Spin } from "antd";
 import { Tooltip } from "@/components/ui/base/tooltip";
 import { History, Maximize2, PenLine } from "lucide-react";
@@ -10,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import type { AssetLibraryPickerItem } from "@/components/assets/asset-library-picker-modal";
 import { PersonalSpaceCreditOverview } from "@/components/layout/team-space-directory";
+import { useWorkspaceTopBarMount } from "@/components/layout/workspace-top-bar-extension";
 import { generationErrorCode, generationErrorMessage } from "@/lib/generation-error";
 import { useGenerationBatchLimit } from "@/lib/generation-batch-limit";
 import { isGenerationCostUncertainError } from "@/lib/canvas/canvas-generation-batch";
@@ -142,14 +144,79 @@ function writeComposerPref(key: string, value: boolean) {
     }
 }
 
+function renderCreationHeading(template: string, assistantName: string) {
+    if (template.includes("{agentName}")) {
+        const parts = template.split("{agentName}");
+        return (
+            <>
+                <span>{parts[0]}</span>
+                <span className="creation-heading-brand">{assistantName}</span>
+                <span>{parts.slice(1).join("{agentName}")}</span>
+            </>
+        );
+    }
+    if (assistantName && template.includes(assistantName)) {
+        const idx = template.indexOf(assistantName);
+        return (
+            <>
+                <span>{template.slice(0, idx)}</span>
+                <span className="creation-heading-brand">{assistantName}</span>
+                <span>{template.slice(idx + assistantName.length)}</span>
+            </>
+        );
+    }
+    if (template.includes("在这里，")) {
+        const idx = template.indexOf("在这里，") + "在这里，".length;
+        return (
+            <>
+                <span>{template.slice(0, idx)}</span>
+                <span className="creation-heading-brand">{assistantName}</span>
+                <span>{template.slice(idx)}</span>
+            </>
+        );
+    }
+    if (template.includes("在这里,")) {
+        const idx = template.indexOf("在这里,") + "在这里,".length;
+        return (
+            <>
+                <span>{template.slice(0, idx)}</span>
+                <span className="creation-heading-brand">{assistantName}</span>
+                <span>{template.slice(idx)}</span>
+            </>
+        );
+    }
+    if (template.includes("在这里")) {
+        const idx = template.indexOf("在这里") + "在这里".length;
+        const rest = template.slice(idx).replace(/^[，,\s]+/, "");
+        return (
+            <>
+                <span>{template.slice(0, idx)}，</span>
+                <span className="creation-heading-brand">{assistantName}</span>
+                <span>{rest}</span>
+            </>
+        );
+    }
+    return (
+        <>
+            <span className="creation-heading-brand">{assistantName}</span>
+            <span className="creation-heading-tagline">{template}</span>
+        </>
+    );
+}
+
 export default function CreatePage() {
     const { t } = useTranslation();
+    const topBarMount = useWorkspaceTopBarMount();
     const [agentMode, setAgentMode] = useState(false);
     const { message: toast, modal } = App.useApp();
     const navigate = useNavigate();
     const [openingCanvas, setOpeningCanvas] = useState(false);
     const openingCanvasRef = useRef(false);
-    const brandName = useAppearanceStore((state) => state.appearance.brandName);
+    const appearance = useAppearanceStore((state) => state.appearance);
+    const brandName = appearance.brandName || "造境";
+    const assistantName = appearance.canvas?.agentName || brandName;
+    const rawWelcomeTitle = appearance.canvas?.welcomeTitle && appearance.canvas.welcomeTitle !== "开始创作" ? appearance.canvas.welcomeTitle : "在这里，和{agentName}让灵感，慢慢成形";
+    const homeSubheading = appearance.canvas?.welcomeDescription || t("create.page.subheading");
     const themeHomeHeading = useThemePack()?.copy?.homeHeading;
     const config = useEffectiveConfig();
     const composerPreferencesHydrated = useCreationPreferencesStore((state) => state.hydrated);
@@ -1659,6 +1726,7 @@ export default function CreatePage() {
     return (
         <>
             <div className="creation-home relative flex h-full min-h-0 flex-col overflow-hidden">
+                {/* 历史同步状态提示已按需求注释
                 <p role="status" aria-live="polite" className="mx-auto px-4 py-1 text-xs text-foreground/55">
                     <span title={historySync.message}>{t(`create.historySync.${historySync.phase}`)}</span>
                     {historySync.message ? <span> · {historySync.message}</span> : null}
@@ -1669,6 +1737,7 @@ export default function CreatePage() {
                     ) : null}
                     <CreationHistoryConflicts key={activeConversationScope} session={historySessionRef.current} status={historySync} busy={busy} />
                 </p>
+                */}
                 {conversationStorageError ? (
                     <p role="status" className="mx-auto mb-3 max-w-3xl px-4 text-xs text-foreground/55">
                         本地历史读取失败，当前会话仍保留。 {conversationStorageError}{" "}
@@ -1686,15 +1755,26 @@ export default function CreatePage() {
                 ) : null}
                 {isEmpty ? (
                     <>
+                        {topBarMount
+                            ? createPortal(
+                                  <div className="flex flex-1 justify-end">
+                                      <button type="button" className="creation-history-entry" aria-label={t("create.page.viewHistory")} aria-expanded={historyOpen} onClick={() => setHistoryOpen(true)}>
+                                          <History aria-hidden="true" />
+                                          <span>{t("create.history.title")}</span>
+                                      </button>
+                                  </div>,
+                                  topBarMount,
+                              )
+                            : null}
                         <AnimatePresence>
                             {launchpadCondensed && !agentMode ? (
                                 <motion.div
                                     className="creation-floating-prompt"
                                     key="floating-prompt"
                                     style={{ x: "-50%" }}
-                                    initial={{ opacity: 0, y: -12, scale: 0.97 }}
+                                    initial={{ opacity: 0, y: 24, scale: 0.97 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                                    exit={{ opacity: 0, y: 16, scale: 0.98 }}
                                     transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 360, damping: 32, mass: 0.8 }}
                                 >
                                     <PenLine aria-hidden="true" />
@@ -1718,13 +1798,15 @@ export default function CreatePage() {
                             <section ref={launchpadRef} className="creation-launchpad" aria-label={t("create.page.launchpadLabel")}>
                                 <header className="creation-start-heading">
                                     <div>
-                                        <h1>{themeHomeHeading || t("create.page.heading", { brand: brandName })}</h1>
-                                        <p>{t("create.page.subheading")}</p>
+                                        <h1>{renderCreationHeading(rawWelcomeTitle, assistantName)}</h1>
+                                        <p>{homeSubheading}</p>
                                     </div>
-                                    <button type="button" className="creation-history-entry" aria-label={t("create.page.viewHistory")} aria-expanded={historyOpen} onClick={() => setHistoryOpen(true)}>
-                                        <History aria-hidden="true" />
-                                        <span>{t("create.history.title")}</span>
-                                    </button>
+                                    {!topBarMount ? (
+                                        <button type="button" className="creation-history-entry" aria-label={t("create.page.viewHistory")} aria-expanded={historyOpen} onClick={() => setHistoryOpen(true)}>
+                                            <History aria-hidden="true" />
+                                            <span>{t("create.history.title")}</span>
+                                        </button>
+                                    ) : null}
                                 </header>
                                 <div className={cn("creation-composer-stage is-home-mode", agentMode && "is-agent-mode")}>
                                     <CreationModeCard

@@ -24,7 +24,7 @@ export function AgentWelcome({ appearance, nodeCount, installedSkillCount = null
     return (
         <section className="agent-welcome" aria-label={t("canvasA.welcome.label")}>
             <div className="agent-welcome-intro">
-                <span className="agent-welcome-orb" aria-hidden="true" />
+                <img src="/huaban-6398074816.gif" alt="" className="agent-welcome-orb" aria-hidden="true" />
                 <h2>{agentCopy(appearance.welcomeTitle, appearance.agentName)}</h2>
                 <p>{agentCopy(appearance.welcomeDescription, appearance.agentName)}</p>
             </div>

@@ -2525,7 +2525,7 @@
         z-index: var(--z-toolbar);
         height: var(--workspace-topbar-height, 56px);
         border: 0;
-        border-bottom: 1px solid var(--workspace-border);
+        /* border-bottom: 1px solid var(--workspace-border); */
         border-radius: 0;
         background: color-mix(in srgb, var(--workspace-content) 94%, transparent);
         box-shadow: none;
@@ -2534,7 +2534,7 @@
     }
 
     .app-workspace-topbar.has-extension {
-        border-bottom: 1px solid var(--workspace-border);
+        /* border-bottom: 1px solid var(--workspace-border); */
         background: color-mix(in srgb, var(--workspace-nav) 92%, transparent);
         backdrop-filter: blur(22px) saturate(120%);
         -webkit-backdrop-filter: blur(22px) saturate(120%);
@@ -23954,7 +23954,8 @@ html:not(.dark) .creation-home .creation-user-message-copy-wrap {
     justify-content: flex-end;
     gap: 12px;
     padding: 0 20px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.055);
+    /* border-bottom: 1px solid rgba(0, 0, 0, 0.055); */
+    border-bottom: none;
     background: #ffffff;
 }
 
@@ -24998,7 +24999,8 @@ html:not(.dark) .creation-home .creation-user-message-copy-wrap {
     color: currentColor !important;
 }
 .dark .app-user-workspace .app-workspace-topbar {
-    border-bottom-color: rgba(255, 255, 255, 0.08);
+    /* border-bottom-color: rgba(255, 255, 255, 0.08); */
+    border-bottom: none;
 }
 .dark .app-user-workspace .creation-empty-workspace > .creation-mode-capsule {
     background: #232326;
@@ -26789,7 +26791,8 @@ html:not(.dark) .creation-home .creation-user-message-copy-wrap {
     flex: none;
     overflow: visible;
     padding-inline: 20px !important;
-    border-bottom: var(--stroke-1) solid var(--user-border) !important;
+    /* border-bottom: var(--stroke-1) solid var(--user-border) !important; */
+    border-bottom: none !important;
     background: var(--user-page-bg) !important;
     color: var(--user-ink) !important;
 }
