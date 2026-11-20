@@ -10,6 +10,7 @@ const (
 	AppearanceAssetLogo                = app.AppearanceAssetLogo
 	AppearanceAssetPoster              = app.AppearanceAssetPoster
 	AppearanceAssetVideo               = app.AppearanceAssetVideo
+	AppearanceAssetAvatarOrb           = app.AppearanceAssetAvatarOrb
 	AssetSourceCanvas                  = app.AssetSourceCanvas
 	AssetSourceUploaded                = app.AssetSourceUploaded
 	CodeBadGateway                     = app.CodeBadGateway

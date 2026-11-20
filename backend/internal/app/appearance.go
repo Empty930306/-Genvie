@@ -31,6 +31,7 @@ const (
 	AppearanceAssetPoster      = "poster"
 	AppearanceAssetUpdateImage = "update-image"
 	AppearanceAssetUpdateVideo = "update-video"
+	AppearanceAssetAvatarOrb   = "avatar-orb"
 )
 
 const (
@@ -39,10 +40,11 @@ const (
 	appearanceLogoMaxBytes            int64 = 5 << 20
 	appearancePosterMaxBytes          int64 = 10 << 20
 	appearanceVideoMaxBytes           int64 = 256 << 20
+	appearanceAvatarOrbMaxBytes       int64 = 20 << 20
 )
 
 const (
-	defaultAppearanceBrandName = "影策"
+	defaultAppearanceBrandName = "造境"
 	defaultAppearanceBrandSlug = "open-ai-canvas"
 	defaultAppearanceSkinID    = "classic"
 	defaultAppearanceLogoURL   = "/logo.svg"
@@ -140,6 +142,8 @@ func AppearanceAssetMaxBytes(slot string) (int64, error) {
 		return appearanceLogoMaxBytes, nil
 	case AppearanceAssetPoster, AppearanceAssetUpdateImage:
 		return appearancePosterMaxBytes, nil
+	case AppearanceAssetAvatarOrb:
+		return appearanceAvatarOrbMaxBytes, nil
 	case AppearanceAssetVideo, AppearanceAssetUpdateVideo:
 		return appearanceVideoMaxBytes, nil
 	default:
@@ -152,7 +156,7 @@ func appearanceSlotIsVideo(slot string) bool {
 }
 
 func appearanceAssetSlots() []string {
-	return []string{AppearanceAssetLogo, AppearanceAssetDarkLogo, AppearanceAssetVideo, AppearanceAssetPoster}
+	return []string{AppearanceAssetLogo, AppearanceAssetDarkLogo, AppearanceAssetVideo, AppearanceAssetPoster, AppearanceAssetAvatarOrb}
 }
 
 func (s *Service) Appearance() (*PublicAppearanceSetting, error) {
@@ -261,6 +265,7 @@ func (s *Service) UpdateAppearance(actor *model.User, value AppearanceSetting) (
 		{slot: AppearanceAssetDarkLogo, resourceID: value.DarkLogoResourceID, currentID: before.DarkLogoResourceID},
 		{slot: AppearanceAssetVideo, resourceID: value.AuthVideoResourceID, currentID: before.AuthVideoResourceID},
 		{slot: AppearanceAssetPoster, resourceID: value.AuthVideoPosterResourceID, currentID: before.AuthVideoPosterResourceID},
+		{slot: AppearanceAssetAvatarOrb, resourceID: value.Canvas.AvatarOrbResourceID, currentID: before.Canvas.AvatarOrbResourceID},
 	} {
 		if err := s.validateAppearanceResource(actor, candidate.slot, candidate.resourceID, candidate.currentID); err != nil {
 			return nil, err
@@ -298,7 +303,7 @@ func (s *Service) ResetAppearance(actor *model.User) (*AdminAppearanceSetting, e
 		return nil, err
 	}
 	after := defaultAppearanceSetting()
-	if err := s.appendAdminAudit(actor, "appearance.reset", "system_setting", appearanceSettingKey, "恢复影策默认品牌标识", map[string]any{"before": before, "after": after}); err != nil {
+	if err := s.appendAdminAudit(actor, "appearance.reset", "system_setting", appearanceSettingKey, "恢复造境默认品牌标识", map[string]any{"before": before, "after": after}); err != nil {
 		return nil, err
 	}
 	return s.AdminAppearance(actor)
@@ -320,10 +325,10 @@ func (s *Service) UploadAppearanceAsset(actor *model.User, slot string, header *
 		kind = "video"
 	}
 	var resource *model.Resource
-	// Logos are tiny, installation-owned assets. Keep them in the server's
+	// Logos and avatar orb animations are tiny, installation-owned assets. Keep them in the server's
 	// persistent resource directory so their availability and cost do not
 	// depend on the administrator's currently selected object storage.
-	if slot == AppearanceAssetLogo || slot == AppearanceAssetDarkLogo {
+	if slot == AppearanceAssetLogo || slot == AppearanceAssetDarkLogo || slot == AppearanceAssetAvatarOrb {
 		resource, err = s.uploadLocalResource(actor.ID, header, kind, 0, 0, 0)
 	} else {
 		resource, err = s.UploadResource(actor.ID, header, kind, 0, 0, 0)
@@ -500,6 +505,8 @@ func (s *Service) resolveAvailableAppearanceAssets(value AppearanceSetting) Appe
 			value.AuthVideoResourceID = ""
 		case AppearanceAssetPoster:
 			value.AuthVideoPosterResourceID = ""
+		case AppearanceAssetAvatarOrb:
+			value.Canvas.AvatarOrbResourceID = ""
 		}
 	}
 	if value.Canvas.AvatarBundleResourceID != "" && !s.agentAvatarBundleAvailable(value.Canvas.AvatarBundleResourceID) {
@@ -687,6 +694,9 @@ func appearanceAllowedMIMETypes(slot string) map[string]struct{} {
 	if appearanceSlotIsVideo(slot) {
 		return map[string]struct{}{"video/mp4": {}, "video/webm": {}}
 	}
+	if slot == AppearanceAssetAvatarOrb {
+		return map[string]struct{}{"image/gif": {}, "image/webp": {}, "image/png": {}, "image/jpeg": {}}
+	}
 	return map[string]struct{}{"image/png": {}, "image/jpeg": {}, "image/webp": {}}
 }
 
@@ -704,6 +714,8 @@ func appearanceAssetLabel(slot string) string {
 		return "公告图片"
 	case AppearanceAssetUpdateVideo:
 		return "公告视频"
+	case AppearanceAssetAvatarOrb:
+		return "Agent 动态球"
 	default:
 		return "外观资源"
 	}
@@ -719,6 +731,8 @@ func appearanceResourceID(value AppearanceSetting, slot string) string {
 		return value.AuthVideoResourceID
 	case AppearanceAssetPoster:
 		return value.AuthVideoPosterResourceID
+	case AppearanceAssetAvatarOrb:
+		return value.Canvas.AvatarOrbResourceID
 	default:
 		return ""
 	}
@@ -787,6 +801,9 @@ func publicAppearanceSetting(setting *model.SystemSetting, value AppearanceSetti
 	if value.AuthVideoPosterResourceID != "" {
 		result.AuthVideoPosterConfigured = true
 		result.AuthVideoPosterURL = appearanceAssetURL(AppearanceAssetPoster, revision)
+	}
+	if value.Canvas.AvatarOrbResourceID != "" {
+		result.Canvas.AvatarOrbURL = appearanceAssetURL(AppearanceAssetAvatarOrb, revision)
 	}
 	return result
 }

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="web/public/logo.svg" width="88" alt="影策 logo">
+  <img src="web/public/logo.svg" width="88" alt="造境 logo">
 </p>
 
-<h1 align="center">影策</h1>
+<h1 align="center">造境</h1>
 
 <p align="center">让一个故事，从文字走向银幕</p>
 
@@ -13,7 +13,7 @@
   <a href="SECURITY.md">安全策略</a>
 </p>
 
-影策是一个开源的 AI 影视与短剧创作工作台。上传一本小说，流水线会完成改编、拆集、建角色、出分镜，再逐段生成视频并合成成片；需要自由发挥时，可以在无限画布上用节点组织图片、视频、文本和 3D 预演，也可以让 Agent 直接在画布上动手。模型渠道、技能、插件、素材和计费都可以自部署、自管理。
+造境是一个开源的 AI 影视与短剧创作工作台。上传一本小说，流水线会完成改编、拆集、建角色、出分镜，再逐段生成视频并合成成片；需要自由发挥时，可以在无限画布上用节点组织图片、视频、文本和 3D 预演，也可以让 Agent 直接在画布上动手。模型渠道、技能、插件、素材和计费都可以自部署、自管理。
 
 <p align="center">
   <img src="assets/screenshots/storyboard.jpg" alt="短剧制作：分镜视图，每段显示镜头、台词、参考图和视频生成状态" width="100%">
@@ -26,22 +26,22 @@
 
 > 项目仍在快速开发，数据结构和外部接口可能调整。默认适合个人、本地或可信环境部署；未经安全配置，不要直接作为公网多人服务使用。
 
-## 下个版本：影策世界引擎（内测中）
+## 下个版本：造境世界引擎（内测中）
 
 在 3D 世界里搭场景、排机位、做动画：天气、布景、建筑、花木和角色直接摆进场景，在地面标记 A、B 点后，用一句话告诉 Agent「将角色从 B 点跑步移动到 A 点」，它会补问细节并生成关键帧。镜头可在时间轴上编排，并导出白模和深度画面作为视频生成的参考。
 
 <p align="center">
-  <img src="assets/screenshots/3d.png" alt="影策世界引擎：古代集市 3D 场景、A/B 标记点、主摄影机、时间轴与 Agent 对话面板" width="100%">
+  <img src="assets/screenshots/3d.png" alt="造境世界引擎：古代集市 3D 场景、A/B 标记点、主摄影机、时间轴与 Agent 对话面板" width="100%">
 </p>
 
 ## 赞助商
 
-感谢以下赞助商对影策项目的支持：
+感谢以下赞助商对造境项目的支持：
 
 | LOGO | 类型 | 赞助商名称 | 说明 | 网站 |
 | --- | --- | --- | --- | --- |
-| <img src="assets/artdance.png" alt="ArtDance" width="160"> | 商业 | ArtDance | 影策项目天使投资人 - `关门人·克里斯` | [artbox.top](https://artbox.top) |
-| <img src="assets/metaso.png" alt="秘塔" width="160"> | 企业 | 秘塔 | 提供 MiniMax H3 视频生成 API，支持原生 2K、音画同步和 OpenAI 兼容协议。`影策官方H3模型唯一合作伙伴！` | [metaso.cn](https://metaso.cn/minimax-h3/?s=dd) |
+| <img src="assets/artdance.png" alt="ArtDance" width="160"> | 商业 | ArtDance | 造境项目天使投资人 - `关门人·克里斯` | [artbox.top](https://artbox.top) |
+| <img src="assets/metaso.png" alt="秘塔" width="160"> | 企业 | 秘塔 | 提供 MiniMax H3 视频生成 API，支持原生 2K、音画同步和 OpenAI 兼容协议。`造境官方H3模型唯一合作伙伴！` | [metaso.cn](https://metaso.cn/minimax-h3/?s=dd) |
 | <img src="assets/tack2ai.svg" alt="源点动力" width="160"> | 商业 | 源点动力 | 专注 Seedance、Wan 等视频模型 API，以更优惠的价格降低成本。部分模型个人三折，企业二折，做人民用得起的供应商。 | [ai.tack2ai.cn](https://ai.tack2ai.cn) |
 | <img src="assets/panda.jpg" alt="panda AI" width="160"> | 团队 | panda AI | API接口平台，面向个人开发者、技术团队与企业，稳定提供GPT、Gemini、grok等图片视频模型 | [api.pandatk.com](https://api.pandatk.com) |
 | <img src="assets/bbkingBra.jpg" alt="bbkingBra API" width="160"> | 商业 | bbkingBra API | 以稳定算力，承载漫剧每一段故事 | [newapi.bobby707.xyz](https://newapi.bobby707.xyz) |
@@ -60,7 +60,7 @@
 
 ### 从小说到成片：短剧制作流水线
 
-上传小说或粘贴正文，影策按集拆分剧本，提取角色、道具和场景，生成结构化分镜，再按剧情段逐段生成视频。第 2 段起自动以上一段最后一帧作为首帧，镜头之间保持连贯。每一步都可以人工接管：改写台词、锁定角色形象、单段重新生成。
+上传小说或粘贴正文，造境按集拆分剧本，提取角色、道具和场景，生成结构化分镜，再按剧情段逐段生成视频。第 2 段起自动以上一段最后一帧作为首帧，镜头之间保持连贯。每一步都可以人工接管：改写台词、锁定角色形象、单段重新生成。
 
 <table>
 <tr>

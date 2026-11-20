@@ -72,7 +72,7 @@ type upstreamPose struct {
 	Image    string `json:"原图"`
 }
 
-// genericPack 是影策通用姿势包：{"format":"yingce-pose-library","version":1,"source":{...},"items":[...]}。
+// genericPack 是造境通用姿势包：{"format":"yingce-pose-library","version":1,"source":{...},"items":[...]}。
 type genericPack struct {
 	Format  string `json:"format"`
 	Version int    `json:"version"`

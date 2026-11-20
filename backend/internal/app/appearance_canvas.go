@@ -19,11 +19,13 @@ type CanvasAppearance struct {
 	AvatarBundleResourceID string            `json:"avatarBundleResourceId"`
 	AvatarClipStates       map[string]string `json:"avatarClipStates,omitempty"`
 	AvatarHeight           int               `json:"avatarHeight"`
+	AvatarOrbResourceID    string            `json:"avatarOrbResourceId,omitempty"`
+	AvatarOrbURL           string            `json:"avatarOrbUrl,omitempty"`
 }
 
 func defaultCanvasAppearance() CanvasAppearance {
 	return CanvasAppearance{
-		AgentName: "影策", LauncherLabel: "Agent", PanelTitle: "画布助手",
+		AgentName: "造境", LauncherLabel: "Agent", PanelTitle: "画布助手",
 		WelcomeTitle:       "在这里，和{agentName}让灵感，慢慢成形",
 		WelcomeDescription: "从一个想法开始，和{agentName}一起创作。",
 		InputPlaceholder:   "输入操作指导；用 @ 引用画布节点，用 / 或 、 引用 Skills",
@@ -74,6 +76,10 @@ func normalizeCanvasAppearance(value CanvasAppearance) (CanvasAppearance, error)
 	if len(value.AvatarBundleResourceID) > 80 {
 		return value, BadAuthRequest("Agent 动画包资源 ID 无效")
 	}
+	value.AvatarOrbResourceID = strings.TrimSpace(value.AvatarOrbResourceID)
+	if len(value.AvatarOrbResourceID) > 80 {
+		return value, BadAuthRequest("Agent 动态球资源 ID 无效")
+	}
 	for state, clip := range value.AvatarClipStates {
 		clip = strings.TrimSpace(clip)
 		if !validAvatarState(state) || !validAvatarClipID(clip) {
@@ -90,7 +96,8 @@ func normalizeCanvasAppearance(value CanvasAppearance) (CanvasAppearance, error)
 func isEmptyCanvasAppearance(value CanvasAppearance) bool {
 	return value.AgentName == "" && value.LauncherLabel == "" && value.PanelTitle == "" && value.WelcomeTitle == "" &&
 		value.WelcomeDescription == "" && value.InputPlaceholder == "" && value.AvatarType == "" && value.Live2DResourceID == "" &&
-		value.Live2DEntry == "" && value.AvatarBundleResourceID == "" && len(value.AvatarClipStates) == 0 && value.AvatarHeight == 0
+		value.Live2DEntry == "" && value.AvatarBundleResourceID == "" && len(value.AvatarClipStates) == 0 && value.AvatarHeight == 0 &&
+		value.AvatarOrbResourceID == ""
 }
 
 func validAvatarState(state string) bool {

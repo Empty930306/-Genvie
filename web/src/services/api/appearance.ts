@@ -67,7 +67,7 @@ export type AdminAppearance = {
 };
 
 export type AppearanceAssetSlot = "logo" | "logo-dark" | "video" | "poster";
-export type AppearanceAssetUploadSlot = AppearanceAssetSlot;
+export type AppearanceAssetUploadSlot = AppearanceAssetSlot | "avatar-orb";
 
 export type AppearanceResource = {
     id: string;

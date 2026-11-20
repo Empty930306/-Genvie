@@ -15,7 +15,7 @@ import {
     type AgentAvatarState,
     type CanvasAppearance,
 } from "@/lib/canvas/agent-appearance";
-import { agentAvatarBundleFileURL, live2DModelURL, uploadAgentAvatarBundle, uploadLive2D } from "@/services/api/appearance";
+import { agentAvatarBundleFileURL, appearanceAssetURL, live2DModelURL, uploadAgentAvatarBundle, uploadAppearanceAsset, uploadLive2D } from "@/services/api/appearance";
 import { AgentAvatarVideo } from "@/components/canvas/agent-avatar-video";
 
 export function CanvasAppearanceEditor({ value, onChange, disabled, onUploading }: { value: CanvasAppearance; onChange: (value: CanvasAppearance) => void; disabled: boolean; onUploading: (value: boolean) => void }) {
@@ -23,6 +23,8 @@ export function CanvasAppearanceEditor({ value, onChange, disabled, onUploading 
     const reducedMotion = useReducedMotion() ?? false;
     const input = useRef<HTMLInputElement>(null);
     const bundleInput = useRef<HTMLInputElement>(null);
+    const orbInput = useRef<HTMLInputElement>(null);
+    const [orbPreviewURL, setOrbPreviewURL] = useState("");
     const [uploading, setUploading] = useState(false);
     const [readyURL, setReadyURL] = useState("");
     const [error, setError] = useState("");
@@ -75,6 +77,32 @@ export function CanvasAppearanceEditor({ value, onChange, disabled, onUploading 
             message.success("导入成功，请预览后选择 Live2D，并点击页面顶部保存");
         } catch (cause) {
             message.error(cause instanceof Error ? cause.message : "模型导入失败");
+        } finally {
+            setUploading(false);
+            onUploading(false);
+        }
+    }
+    async function handleUploadOrb(file?: File) {
+        if (!file) return;
+        const validTypes = ["image/gif", "image/webp", "image/png", "image/jpeg"];
+        if (!validTypes.includes(file.type) || file.size > 20 * 1024 * 1024) {
+            message.error("请选择不超过 20 MB 的 GIF / WebP / PNG / JPEG 动态图片");
+            return;
+        }
+        setUploading(true);
+        onUploading(true);
+        try {
+            const resource = await uploadAppearanceAsset("avatar-orb", file);
+            const objectURL = URL.createObjectURL(file);
+            setOrbPreviewURL(objectURL);
+            change({
+                avatarType: "orb",
+                avatarOrbResourceId: resource.id,
+                avatarOrbUrl: appearanceAssetURL("avatar-orb"),
+            });
+            message.success("动态图已上传，请点击页面顶部「保存」以持久化配置");
+        } catch (cause) {
+            message.error(cause instanceof Error ? cause.message : "动态图上传失败");
         } finally {
             setUploading(false);
             onUploading(false);
@@ -143,6 +171,45 @@ export function CanvasAppearanceEditor({ value, onChange, disabled, onUploading 
                         change(type === "bundle" ? { avatarType: type, avatarClipStates: value.avatarClipStates || DEFAULT_AGENT_AVATAR_CLIP_STATES } : { avatarType: type });
                     }}
                 />
+                {value.avatarType === "orb" ? (
+                    <div className="grid gap-3 rounded-lg border border-border/50 bg-foreground/[0.02] p-4">
+                        <div className="flex items-center gap-4">
+                            <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/80 bg-foreground/5 shadow-inner">
+                                <img src={orbPreviewURL || value.avatarOrbUrl || (value.avatarOrbResourceId ? appearanceAssetURL("avatar-orb") : "/huaban-6398074816.gif")} alt="Agent 动态形象预览" className="size-full object-contain" />
+                            </div>
+                            <div className="grid gap-1">
+                                <div className="text-sm font-medium">自定义动态图（支持 GIF / WebP / PNG / JPEG）</div>
+                                <div className="text-xs text-foreground/55">{value.avatarOrbResourceId || orbPreviewURL ? "已配置自定义动图，全站助手动态球将展示此效果" : "当前使用系统默认动图，可点击上传替换为任意 GIF 动图"}</div>
+                            </div>
+                        </div>
+                        <input
+                            ref={orbInput}
+                            type="file"
+                            accept="image/gif,image/webp,image/png,image/jpeg"
+                            className="hidden"
+                            onChange={(event) => {
+                                void handleUploadOrb(event.target.files?.[0]);
+                                event.currentTarget.value = "";
+                            }}
+                        />
+                        <div className="flex flex-wrap gap-2">
+                            <Button icon={<Upload className="size-4" />} disabled={disabled || uploading} loading={uploading} onClick={() => orbInput.current?.click()}>
+                                {value.avatarOrbResourceId || orbPreviewURL ? "更换动图" : "上传自定义 GIF 动图 (最大 20MB)"}
+                            </Button>
+                            {value.avatarOrbResourceId || orbPreviewURL ? (
+                                <Button
+                                    disabled={disabled || uploading}
+                                    onClick={() => {
+                                        change({ avatarOrbResourceId: "", avatarOrbUrl: "" });
+                                        setOrbPreviewURL("");
+                                    }}
+                                >
+                                    恢复内置默认动图
+                                </Button>
+                            ) : null}
+                        </div>
+                    </div>
+                ) : null}
                 {value.avatarType === "live2d" ? (
                     <p className="text-sm text-foreground/60">上传有授权的 Cubism 3/4 运行时 ZIP：一个 model3.json、moc3、PNG 纹理及可选动作/表情 JSON。首期不支持音频、旧版模型和编辑工程。模型会发送到浏览器，无法保证防下载。</p>
                 ) : null}
@@ -303,7 +370,7 @@ export function CanvasAppearanceEditor({ value, onChange, disabled, onUploading 
                             <AgentAvatarVideo src={previewBundleURL} loop={!["completed", "failed"].includes(selectedAvatarState)} />
                         </div>
                     ) : (
-                        <AgentOrb size={60} color="#7164f6" />
+                        <AgentOrb size={60} color="#7164f6" customUrl={orbPreviewURL || value.avatarOrbUrl || (value.avatarOrbResourceId ? appearanceAssetURL("avatar-orb") : undefined)} />
                     )}
                     <strong>{agentCopy(value.welcomeTitle, value.agentName)}</strong>
                     <p className="text-sm text-foreground/60">{agentCopy(value.welcomeDescription, value.agentName)}</p>

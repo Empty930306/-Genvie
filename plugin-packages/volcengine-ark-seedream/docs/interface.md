@@ -97,7 +97,7 @@
   "id": "volcengine-ark-seedream",
   "name": "火山方舟 Seedream 官方图片生成",
   "version": "2.1.0",
-  "author": "Volcengine / 影策",
+  "author": "Volcengine / 造境",
   "description": "火山方舟官方 Seedream 图片生成接口，使用普通 /api/v3 推理 API Key；支持图片生成和参考图编辑。",
   "documentation": "<当前插件的完整 documentation，由 README.md 与 docs/interface.md 拼接而成；为避免 JSON 递归，此处不重复展开正文。>",
   "permissions": [

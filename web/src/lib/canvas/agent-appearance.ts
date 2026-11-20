@@ -12,6 +12,8 @@ export type CanvasAppearance = {
     avatarBundleResourceId: string;
     avatarClipStates?: Partial<Record<AgentAvatarState, string>>;
     avatarHeight: number;
+    avatarOrbResourceId?: string;
+    avatarOrbUrl?: string;
 };
 
 export type AgentAvatarState = "idle" | "queued" | "running" | "waiting_approval" | "completed" | "failed" | "cancelled" | "rejected";
@@ -83,7 +85,7 @@ export function suggestedAgentAvatarClipStates(manifest: AgentAvatarBundleManife
 }
 
 export const DEFAULT_CANVAS_APPEARANCE: CanvasAppearance = {
-    agentName: "影策",
+    agentName: "造境",
     launcherLabel: "Agent",
     panelTitle: "画布助手",
     welcomeTitle: "在这里，和{agentName}让灵感，慢慢成形",
@@ -104,6 +106,7 @@ export const DEFAULT_CANVAS_APPEARANCE: CanvasAppearance = {
         rejected: "think",
     },
     avatarHeight: 220,
+    avatarOrbResourceId: "",
 };
 
 export function agentCopy(template: string, name: string) {

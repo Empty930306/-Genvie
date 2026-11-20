@@ -12,7 +12,7 @@ export function agentOrbStateForAvatar(avatarState: string): AgentOrbState {
 }
 
 /** 助手圆球：当前皮肤的主题包带了助手形象就用它，否则用上游流光球。 */
-export function AgentOrb({ size = 60, state = "idle", color, className }: { size?: number; state?: AgentOrbState; color?: string; className?: string }) {
+export function AgentOrb({ size = 60, state = "idle", color, className, customUrl }: { size?: number; state?: AgentOrbState; color?: string; className?: string; customUrl?: string }) {
     const ThemeOrb = useThemePack()?.agentOrb;
-    return ThemeOrb ? <ThemeOrb size={size} state={state} className={className} /> : <FluidOrb size={size} color={color} className={className} />;
+    return ThemeOrb ? <ThemeOrb size={size} state={state} className={className} /> : <FluidOrb size={size} color={color} className={className} customUrl={customUrl} />;
 }
