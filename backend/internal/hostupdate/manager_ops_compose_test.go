@@ -1,6 +1,7 @@
 package hostupdate
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"os"
@@ -26,7 +27,7 @@ func TestImmutableImageRefsLowercasesOwner(t *testing.T) {
 }
 
 // raw.githubusercontent.com 在部分网络被封禁，Release 资产包含同一份 Compose，
-// 因此首个地址失败时必须继续尝试后续候选地址，而不是让整项检测失败。
+// 因此首个地址失败（含一次传输层重试）后必须继续尝试后续候选地址，而不是让整项检测失败。
 func TestPrepareTargetComposeFallsBackToReleaseAsset(t *testing.T) {
 	m := sourceManager(t)
 	var hosts []string
@@ -43,8 +44,14 @@ func TestPrepareTargetComposeFallsBackToReleaseAsset(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(path)
-	if len(hosts) != 2 || hosts[0] != "raw.githubusercontent.com" || hosts[1] != "github.com" {
+	want := []string{"raw.githubusercontent.com", "raw.githubusercontent.com", "github.com"}
+	if len(hosts) != len(want) {
 		t.Fatalf("unexpected candidates: %#v", hosts)
+	}
+	for index := range want {
+		if hosts[index] != want[index] {
+			t.Fatalf("unexpected candidates: %#v", hosts)
+		}
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -52,6 +59,29 @@ func TestPrepareTargetComposeFallsBackToReleaseAsset(t *testing.T) {
 	}
 	if string(data) != "services: {}\n" {
 		t.Fatalf("unexpected compose content: %q", data)
+	}
+}
+
+// 到 GitHub 的偶发 TLS RST 与首包超时应在同一地址重试一次，避免把可恢复的抖动
+// 上报为来源不可用；第二次成功时不应再回退到后续候选地址。
+func TestGitHubGetRetriesTransientTransportError(t *testing.T) {
+	m := sourceManager(t)
+	calls := 0
+	m.httpClient.Transport = sourceTransport(func(r *http.Request) (*http.Response, error) {
+		calls++
+		if calls == 1 {
+			return nil, io.ErrUnexpectedEOF
+		}
+		return sourceResponse(http.StatusOK, "ok"), nil
+	})
+
+	response, err := m.githubGet(context.Background(), "https://raw.githubusercontent.com/empty616165/genvie/v1.8.7.6/docker-compose.deploy.yml", Sources{"direct", "ghcr"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if calls != 2 {
+		t.Fatalf("made %d requests, want 2", calls)
 	}
 }
 

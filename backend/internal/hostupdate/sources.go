@@ -11,6 +11,9 @@ import (
 
 var ErrBusy = errors.New("更新、版本检查或来源检测正在进行，请稍后重试")
 
+// errRedirectRejected 表示重定向被安全策略拒绝，重试不会改变结果。
+var errRedirectRejected = errors.New("更新资源重定向不符合安全策略")
+
 func (s Sources) Validate() error {
 	if s.GitHubSource != "direct" && s.GitHubSource != "gh_proxy" {
 		return errors.New("GitHub 来源必须为 direct 或 gh_proxy")
@@ -89,19 +92,22 @@ func (m *Manager) githubGet(ctx context.Context, original string, sources Source
 	if proxy {
 		address = "https://gh-proxy.com/" + original
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
-	if err != nil {
-		return nil, err
-	}
-	request.Header.Set("User-Agent", "open-ai-canvas-host-updater")
-	if accept != "" {
-		request.Header.Set("Accept", accept)
-	}
-	if parsed.Hostname() == "api.github.com" {
-		request.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-		if !proxy && m.config.GitHubToken != "" {
-			request.Header.Set("Authorization", "Bearer "+m.config.GitHubToken)
+	newRequest := func() (*http.Request, error) {
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
+		if err != nil {
+			return nil, err
 		}
+		request.Header.Set("User-Agent", "open-ai-canvas-host-updater")
+		if accept != "" {
+			request.Header.Set("Accept", accept)
+		}
+		if parsed.Hostname() == "api.github.com" {
+			request.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+			if !proxy && m.config.GitHubToken != "" {
+				request.Header.Set("Authorization", "Bearer "+m.config.GitHubToken)
+			}
+		}
+		return request, nil
 	}
 	client := *m.httpClient
 	client.CheckRedirect = func(next *http.Request, via []*http.Request) error {
@@ -110,26 +116,39 @@ func (m *Manager) githubGet(ctx context.Context, original string, sources Source
 		}
 		host := next.URL.Hostname()
 		if next.URL.Scheme != "https" || next.URL.User != nil || next.URL.Port() != "" {
-			return errors.New("更新资源重定向地址无效")
+			return fmt.Errorf("%w：地址无效", errRedirectRejected)
 		}
 		if proxy {
 			next.Header.Del("Authorization")
 			if host != "gh-proxy.com" {
-				return errors.New("镜像源重定向离开 gh-proxy.com，请检查来源或切换直连")
+				return fmt.Errorf("%w：镜像源重定向离开 gh-proxy.com，请检查来源或切换直连", errRedirectRejected)
 			}
 		} else {
 			if host != "api.github.com" {
 				next.Header.Del("Authorization")
 			}
 			if host != "github.com" && host != "api.github.com" && !strings.HasSuffix(host, ".githubusercontent.com") {
-				return errors.New("更新资源重定向离开 GitHub")
+				return fmt.Errorf("%w：重定向离开 GitHub", errRedirectRejected)
 			}
 		}
 		return nil
 	}
-	response, err := client.Do(request)
-	if err != nil {
-		return nil, err
+	// 到 GitHub 的链路在部分网络会偶发 TLS RST 或首包超时，重试一次通常即可成功；
+	// GET 请求无 body，重放安全。仅对传输层错误重试，HTTP 状态错误保持原样。
+	var response *http.Response
+	for attempt := 0; attempt < 2; attempt++ {
+		request, err := newRequest()
+		if err != nil {
+			return nil, err
+		}
+		response, err = client.Do(request)
+		if err == nil {
+			break
+		}
+		// 策略性拒绝与超时/重置不同，重试不会改变结果。
+		if attempt == 1 || ctx.Err() != nil || errors.Is(err, errRedirectRejected) {
+			return nil, err
+		}
 	}
 	if response.StatusCode != http.StatusOK {
 		response.Body.Close()
