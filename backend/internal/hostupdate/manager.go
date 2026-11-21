@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -106,10 +107,19 @@ func NewManager(config Config) (*Manager, error) {
 		return nil, fmt.Errorf("创建备份目录：%w", err)
 	}
 	manager := &Manager{
-		config:     config,
-		runner:     execRunner{dir: config.InstallDir},
-		httpClient: &http.Client{Timeout: 30 * time.Second},
-		state:      persistedState{Operation: Operation{Phase: PhaseIdle, Logs: []LogEntry{}}},
+		config: config,
+		runner: execRunner{dir: config.InstallDir},
+		// Client.Timeout 会连 body 读取一起计时，而 Release 二进制可达数 MB；
+		// 总时长交给每个调用方的 context 控制，这里只限制建立连接与等待响应头。
+		httpClient: &http.Client{Transport: &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           (&net.Dialer{Timeout: 15 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
+			TLSHandshakeTimeout:   15 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			ForceAttemptHTTP2:     true,
+		}},
+		state: persistedState{Operation: Operation{Phase: PhaseIdle, Logs: []LogEntry{}}},
 	}
 	if err := manager.loadState(); err != nil {
 		return nil, err

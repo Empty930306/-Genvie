@@ -206,7 +206,8 @@ func (m *Manager) prepareUpdaterBinary(targetVersion string, sources Sources) (s
 }
 
 func (m *Manager) downloadReleaseAsset(url string, limit int64, sources Sources) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	// 二进制可达数 MB，经代理镜像时吞吐可能只有数十 KB/s，按 5 分钟给足余量。
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	response, err := m.githubGet(ctx, url, sources, "")
 	if err != nil {
