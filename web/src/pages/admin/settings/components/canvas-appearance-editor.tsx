@@ -9,6 +9,7 @@ import {
     DEFAULT_AGENT_AVATAR_CLIP_STATES,
     agentAvatarClipForState,
     agentCopy,
+    agentCopySegments,
     isAgentAvatarBundleManifest,
     suggestedAgentAvatarClipStates,
     type AgentAvatarBundleManifest,
@@ -145,7 +146,22 @@ export function CanvasAppearanceEditor({ value, onChange, disabled, onUploading 
                             ["agentName", "助手名称", 24],
                             ["launcherLabel", "悬浮入口文字（可留空）", 24],
                             ["panelTitle", "对话面板标题", 40],
-                            ["welcomeTitle", "欢迎标题", 100],
+                        ] as const
+                    ).map(([key, label, max]) => (
+                        <Form.Item key={key} label={label}>
+                            <Input value={value[key]} maxLength={max} showCount onChange={(event) => change({ [key]: event.target.value })} />
+                        </Form.Item>
+                    ))}
+                    <Form.Item label="欢迎标题" extra="创作首页大标题与画布助手欢迎语共用这一条。写 {agentName} 会替换为助手名称并做渐变高亮；不写则原样显示。">
+                        <div className="flex items-center gap-2">
+                            <Input value={value.welcomeTitle} maxLength={100} showCount onChange={(event) => change({ welcomeTitle: event.target.value })} />
+                            <Button size="small" disabled={disabled || uploading || value.welcomeTitle.includes("{agentName}")} onClick={() => change({ welcomeTitle: `${value.welcomeTitle}{agentName}` })}>
+                                插入 {"{agentName}"}
+                            </Button>
+                        </div>
+                    </Form.Item>
+                    {(
+                        [
                             ["welcomeDescription", "欢迎说明", 200],
                             ["inputPlaceholder", "输入框提示", 160],
                         ] as const
@@ -372,7 +388,17 @@ export function CanvasAppearanceEditor({ value, onChange, disabled, onUploading 
                     ) : (
                         <AgentOrb size={60} color="#7164f6" customUrl={orbPreviewURL || value.avatarOrbUrl || (value.avatarOrbResourceId ? appearanceAssetURL("avatar-orb") : undefined)} />
                     )}
-                    <strong>{agentCopy(value.welcomeTitle, value.agentName)}</strong>
+                    <strong>
+                        {agentCopySegments(value.welcomeTitle, value.agentName).map((segment, index) =>
+                            segment.brand ? (
+                                <span key={index} className="bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-400 bg-clip-text font-bold text-transparent">
+                                    {segment.text}
+                                </span>
+                            ) : (
+                                <span key={index}>{segment.text}</span>
+                            ),
+                        )}
+                    </strong>
                     <p className="text-sm text-foreground/60">{agentCopy(value.welcomeDescription, value.agentName)}</p>
                     {url ? <small>{readyURL === url ? "预览已就绪，可选择 Live2D 并保存启用" : "等待模型预览就绪"}</small> : null}
                 </div>

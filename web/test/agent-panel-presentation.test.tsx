@@ -24,9 +24,17 @@ test("empty Agent conversation hides skill actions before the administrator sess
 
 test("original welcome uses configured names and escapes them as text", () => {
     const html = renderToStaticMarkup(<AgentWelcome appearance={{ ...DEFAULT_CANVAS_APPEARANCE, agentName: "我的<工作室>" }} nodeCount={2} onChooseSkill={noop} onDraftPrompt={noop} />);
-    expect(html).toContain("在这里，和我的&lt;工作室&gt;让灵感，慢慢成形");
+    expect(html).toContain(">在这里，<");
+    expect(html).toContain('<span class="agent-welcome-brand">我的&lt;工作室&gt;</span>');
+    expect(html).toContain(">让灵感，慢慢成形<");
     expect(html).toContain("2 个节点");
     expect(html).not.toContain('disabled=""');
+});
+
+test("welcome title without a name renders as plain text instead of inserting one", () => {
+    const html = renderToStaticMarkup(<AgentWelcome appearance={{ ...DEFAULT_CANVAS_APPEARANCE, welcomeTitle: "在这里，让灵感，慢慢成形" }} nodeCount={0} onChooseSkill={noop} onDraftPrompt={noop} />);
+    expect(html).toContain(">在这里，让灵感，慢慢成形<");
+    expect(html).not.toContain("agent-welcome-brand");
 });
 
 test("submission state is explicit instead of claiming the model is thinking", () => {

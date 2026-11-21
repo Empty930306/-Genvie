@@ -40,7 +40,7 @@ import { useCreationPreferencesStore } from "@/stores/use-creation-preferences-s
 import { useAssetStore } from "@/stores/use-asset-store";
 import { loadAssetsForUse, saveRemoteUserDataNow } from "@/services/user-data-sync";
 import { useAppearanceStore } from "@/stores/use-appearance-store";
-import { useThemePack } from "@/themes/use-theme-pack";
+import { agentCopySegments } from "@/lib/canvas/agent-appearance";
 import { cn } from "@/lib/utils";
 import { useUserStore } from "@/stores/use-user-store";
 import type { PromptOptimizerProvider } from "@/lib/plugins/plugin-types";
@@ -145,64 +145,14 @@ function writeComposerPref(key: string, value: boolean) {
 }
 
 function renderCreationHeading(template: string, assistantName: string) {
-    // 兼容历史配置中的 "在这里，和{agentName}" 或 "在这里，{agentName}" 等断句
-    const tpl = template.replace(/在这里[，,\s]*和\{agentName\}/g, "在这里{agentName}").replace(/在这里[，,\s]*\{agentName\}/g, "在这里{agentName}");
-
-    if (tpl.includes("{agentName}")) {
-        const parts = tpl.split("{agentName}");
-        const before = parts[0];
-        let after = parts.slice(1).join("{agentName}");
-        if (before.endsWith("在这里") && (after.startsWith("让灵感") || after.startsWith("慢慢"))) {
-            after = "，" + after.replace(/^[，,\s]*/, "");
-        }
-        return (
-            <>
-                <span>{before}</span>
-                <span className="creation-heading-brand">{assistantName}</span>
-                <span>{after}</span>
-            </>
-        );
-    }
-
-    if (assistantName && tpl.includes(assistantName)) {
-        const normalized = tpl.replace(new RegExp(`在这里[，,\\s]*和${assistantName}`, "g"), `在这里${assistantName}`).replace(new RegExp(`在这里[，,\\s]+${assistantName}`, "g"), `在这里${assistantName}`);
-        const idx = normalized.indexOf(assistantName);
-        const before = normalized.slice(0, idx);
-        let after = normalized.slice(idx + assistantName.length);
-        if (before.endsWith("在这里") && (after.startsWith("让灵感") || after.startsWith("慢慢") || !after.startsWith("，"))) {
-            after = "，" + after.replace(/^[，,\s]*/, "");
-        }
-        return (
-            <>
-                <span>{before}</span>
-                <span className="creation-heading-brand">{assistantName}</span>
-                <span>{after}</span>
-            </>
-        );
-    }
-
-    if (tpl.startsWith("在这里")) {
-        let rest = tpl
-            .slice("在这里".length)
-            .replace(/^[，,\s]*(和)?/, "")
-            .replace(/^[，,\s]*/, "");
-        if (rest && !rest.startsWith("，")) {
-            rest = "，" + rest;
-        }
-        return (
-            <>
-                <span>在这里</span>
-                <span className="creation-heading-brand">{assistantName}</span>
-                <span>{rest}</span>
-            </>
-        );
-    }
-
-    return (
-        <>
-            <span className="creation-heading-brand">{assistantName}</span>
-            <span className="creation-heading-tagline">{template}</span>
-        </>
+    return agentCopySegments(template, assistantName).map((segment, index) =>
+        segment.brand ? (
+            <span key={index} className="creation-heading-brand">
+                {segment.text}
+            </span>
+        ) : (
+            <span key={index}>{segment.text}</span>
+        ),
     );
 }
 
@@ -217,9 +167,8 @@ export default function CreatePage() {
     const appearance = useAppearanceStore((state) => state.appearance);
     const brandName = appearance.brandName || "造境";
     const assistantName = appearance.canvas?.agentName || brandName;
-    const rawWelcomeTitle = appearance.canvas?.welcomeTitle && appearance.canvas.welcomeTitle !== "开始创作" ? appearance.canvas.welcomeTitle : "在这里{agentName}，让灵感，慢慢成形";
+    const rawWelcomeTitle = appearance.canvas?.welcomeTitle && appearance.canvas.welcomeTitle !== "开始创作" ? appearance.canvas.welcomeTitle : "在这里，{agentName}让灵感，慢慢成形";
     const homeSubheading = appearance.canvas?.welcomeDescription || t("create.page.subheading");
-    const themeHomeHeading = useThemePack()?.copy?.homeHeading;
     const config = useEffectiveConfig();
     const composerPreferencesHydrated = useCreationPreferencesStore((state) => state.hydrated);
     const rememberMode = useCreationPreferencesStore((state) => state.rememberMode);

@@ -1,7 +1,7 @@
 import { useSkillLibraryAccess } from "@/lib/skill-access";
 import { ArrowUpRight, Clapperboard, Layers3, Orbit, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { agentCopy, type CanvasAppearance } from "@/lib/canvas/agent-appearance";
+import { agentCopy, agentCopySegments, type CanvasAppearance } from "@/lib/canvas/agent-appearance";
 
 /** 已安装技能少于这个数时，欢迎页主动提示按行业安装推荐技能。 */
 const RECOMMEND_SKILLS_BELOW = 3;
@@ -25,7 +25,17 @@ export function AgentWelcome({ appearance, nodeCount, installedSkillCount = null
         <section className="agent-welcome" aria-label={t("canvasA.welcome.label")}>
             <div className="agent-welcome-intro">
                 <img src="/huaban-6398074816.gif" alt="" className="agent-welcome-orb" aria-hidden="true" />
-                <h2>{agentCopy(appearance.welcomeTitle, appearance.agentName)}</h2>
+                <h2>
+                    {agentCopySegments(appearance.welcomeTitle, appearance.agentName).map((segment, index) =>
+                        segment.brand ? (
+                            <span key={index} className="agent-welcome-brand">
+                                {segment.text}
+                            </span>
+                        ) : (
+                            <span key={index}>{segment.text}</span>
+                        ),
+                    )}
+                </h2>
                 <p>{agentCopy(appearance.welcomeDescription, appearance.agentName)}</p>
             </div>
             <div className="agent-welcome-actions">

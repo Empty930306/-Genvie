@@ -5811,3 +5811,10 @@ URL 使用归属校验后的资源访问地址，本地存储也可签发厂商�
 - 已修复：脚本加载失败或十秒内无响应时显示重试入口，重试重建失败的脚本节点；验证过期、出错与超时均清除旧令牌。容器跨越 300px 宽度时切换 compact／flexible 实例，忽略旧实例及卸载后的回调。
 - 自动化回归使用真实组件与受控脚本事件，不连接 Cloudflare、不消耗真实验证凭据。
 - [ ] 真实站点密钥下复核加载失败、重新验证、320px／390px 与桌面宽度切换；Safari、Firefox 和手机真机待验收。
+
+## 欢迎标题与画布助手文案统一
+
+- 已实现：创作首页大标题与画布助手欢迎语共用 `welcomeTitle`，统一走 `agentCopySegments`；`{agentName}` 替换为助手名称并做渐变高亮，其余文字原样输出，不再自动插名或补逗号。后台「画布配置 → 欢迎标题」补充说明和「插入 {agentName}」按钮，后台预览的高亮与首页、助手面板一致。默认文案改为 `在这里，{agentName}让灵感，慢慢成形`；已保存的旧配置不迁移，需在后台改字段后保存才会出现名称与渐变。
+- 已移除：首页标题里按「在这里」猜测断句的兼容分支、随之无人使用的 `themeHomeHeading`、`useThemePack` 引入和 `.creation-heading-tagline` 样式；主题包 `copy.homeHeading` 目前不覆盖首页标题。
+- 已验证：`bun test src/lib/canvas/agent-appearance.test.ts`（6 项）、`bun run typecheck`、`bun run lint`、`gofmt -l`、`go build ./internal/app/`、`go test ./internal/app/ -run "Appearance|CanvasAppearance"`。
+- [ ] 真实浏览器验收：后台把「欢迎标题」改成 `在这里，{agentName}让灵感，慢慢成形` 并保存，确认首页大标题与画布助手面板文字、渐变断句一致；明暗主题、减少动态效果、长助手名称换行；助手名称改为非默认值后刷新，确认两处都跟随。未部署线上。

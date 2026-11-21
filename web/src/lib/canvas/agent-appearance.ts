@@ -88,7 +88,7 @@ export const DEFAULT_CANVAS_APPEARANCE: CanvasAppearance = {
     agentName: "造境",
     launcherLabel: "Agent",
     panelTitle: "画布助手",
-    welcomeTitle: "在这里{agentName}，让灵感，慢慢成形",
+    welcomeTitle: "在这里，{agentName}让灵感，慢慢成形",
     welcomeDescription: "从一个想法开始，和{agentName}一起创作。",
     inputPlaceholder: "输入操作指导；用 @ 引用画布节点，用 / 或 、 引用 Skills",
     avatarType: "bundle",
@@ -111,4 +111,35 @@ export const DEFAULT_CANVAS_APPEARANCE: CanvasAppearance = {
 
 export function agentCopy(template: string, name: string) {
     return template.replaceAll("{agentName}", () => name);
+}
+
+export type AgentCopySegment = { text: string; brand: boolean };
+
+/**
+ * 把文案切成「普通文字 / 助手名称」片段，只分段不改字，供标题高亮使用。
+ * 优先按 {agentName} 占位符切；没有占位符时退化为按名称字面量切；都没有时整段普通文字。
+ */
+export function agentCopySegments(template: string, name: string): AgentCopySegment[] {
+    // 名称为空时没有可高亮的片段：替换掉占位符后整段按普通文字输出，避免出现空的高亮段。
+    if (!name) return [{ text: agentCopy(template, ""), brand: false }];
+    const segments: AgentCopySegment[] = [];
+    const push = (text: string, brand: boolean) => {
+        if (text) segments.push({ text, brand });
+    };
+    if (template.includes("{agentName}")) {
+        template.split("{agentName}").forEach((part, index) => {
+            if (index > 0) push(name, true);
+            push(part, false);
+        });
+        return segments;
+    }
+    if (name && template.includes(name)) {
+        template.split(name).forEach((part, index) => {
+            if (index > 0) push(name, true);
+            push(part, false);
+        });
+        return segments;
+    }
+    push(template, false);
+    return segments;
 }
