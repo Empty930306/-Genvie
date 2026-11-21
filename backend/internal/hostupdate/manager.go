@@ -111,12 +111,15 @@ func NewManager(config Config) (*Manager, error) {
 		runner: execRunner{dir: config.InstallDir},
 		// Client.Timeout 会连 body 读取一起计时，而 Release 二进制可达数 MB；
 		// 总时长交给每个调用方的 context 控制，这里只限制建立连接与等待响应头。
+		// GitHub 在部分网络下有较大概率返回半死连接（连接建立后读不到响应），
+		// 因此不复用空闲连接，让每次尝试都走全新 TCP，配合 githubGet 的有限重试。
 		httpClient: &http.Client{Transport: &http.Transport{
 			Proxy:                 http.ProxyFromEnvironment,
 			DialContext:           (&net.Dialer{Timeout: 15 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
 			TLSHandshakeTimeout:   15 * time.Second,
-			ResponseHeaderTimeout: 30 * time.Second,
+			ResponseHeaderTimeout: 20 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
+			DisableKeepAlives:     true,
 			ForceAttemptHTTP2:     true,
 		}},
 		state: persistedState{Operation: Operation{Phase: PhaseIdle, Logs: []LogEntry{}}},

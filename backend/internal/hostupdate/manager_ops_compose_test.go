@@ -44,14 +44,17 @@ func TestPrepareTargetComposeFallsBackToReleaseAsset(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(path)
-	want := []string{"raw.githubusercontent.com", "raw.githubusercontent.com", "github.com"}
-	if len(hosts) != len(want) {
-		t.Fatalf("unexpected candidates: %#v", hosts)
+	// raw 站点不可达时必须耗尽重试再回退，不能只试一次就失败提交给用户。
+	if len(hosts) < 2 {
+		t.Fatalf("expected retries before fallback, got %#v", hosts)
 	}
-	for index := range want {
-		if hosts[index] != want[index] {
-			t.Fatalf("unexpected candidates: %#v", hosts)
+	for _, host := range hosts[:len(hosts)-1] {
+		if host != "raw.githubusercontent.com" {
+			t.Fatalf("fallback happened before exhausting retries: %#v", hosts)
 		}
+	}
+	if hosts[len(hosts)-1] != "github.com" {
+		t.Fatalf("last candidate must be the Release asset host: %#v", hosts)
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {

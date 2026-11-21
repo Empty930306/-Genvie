@@ -133,10 +133,12 @@ func (m *Manager) githubGet(ctx context.Context, original string, sources Source
 		}
 		return nil
 	}
-	// 到 GitHub 的链路在部分网络会偶发 TLS RST 或首包超时，重试一次通常即可成功；
-	// GET 请求无 body，重放安全。仅对传输层错误重试，HTTP 状态错误保持原样。
+	// 到 GitHub 的链路在部分网络下约有半数连接是半死的：TCP 建立后读不到响应，
+	// 表现为 TLS RST 或首包超时。GET 请求无 body，重放安全，因此做有限多次尝试。
+	// 策略性重定向拒绝重试无意义，直接返回。
+	const attempts = 6
 	var response *http.Response
-	for attempt := 0; attempt < 2; attempt++ {
+	for attempt := 0; attempt < attempts; attempt++ {
 		request, err := newRequest()
 		if err != nil {
 			return nil, err
@@ -145,8 +147,7 @@ func (m *Manager) githubGet(ctx context.Context, original string, sources Source
 		if err == nil {
 			break
 		}
-		// 策略性拒绝与超时/重置不同，重试不会改变结果。
-		if attempt == 1 || ctx.Err() != nil || errors.Is(err, errRedirectRejected) {
+		if attempt == attempts-1 || ctx.Err() != nil || errors.Is(err, errRedirectRejected) {
 			return nil, err
 		}
 	}

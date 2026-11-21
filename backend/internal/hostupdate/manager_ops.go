@@ -86,7 +86,9 @@ func (m *Manager) prepareTargetCompose(targetVersion string, sources Sources) (s
 	var data []byte
 	var failures []string
 	for _, url := range m.targetComposeURLs(targetVersion) {
-		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		// Release 资产会 302 到 release-assets.githubusercontent.com，该域名在部分网络
+		// 首包明显更慢，45 秒会在重试之后仍不够用。
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 		response, err := m.githubGet(ctx, url, sources, "")
 		if err == nil {
 			body, readErr := io.ReadAll(io.LimitReader(response.Body, (2<<20)+1))
