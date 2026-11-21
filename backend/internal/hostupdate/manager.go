@@ -21,6 +21,10 @@ import (
 
 const maxReleaseResponseBytes = 4 << 20
 
+// DefaultRepository 是更新器默认读取 Release、Compose 和 Host Updater 二进制的仓库。
+// 容器镜像包名固定为 genvie-canvas-*，因此这里要指向实际发布该包的仓库。
+const DefaultRepository = "empty616165/genvie"
+
 type Config struct {
 	Repository   string
 	InstallDir   string
@@ -72,7 +76,7 @@ type Manager struct {
 func NewManager(config Config) (*Manager, error) {
 	config.Repository = strings.TrimSpace(config.Repository)
 	if config.Repository == "" {
-		config.Repository = "Empty930306/-Genvie"
+		config.Repository = DefaultRepository
 	}
 	if config.InstallDir == "" {
 		config.InstallDir = "/opt/open-ai-canvas"

@@ -64,19 +64,30 @@ description: Host Updater、Release 检查、数据库备份迁移、健康验�
 
 ## 安装与升级约束
 
-GHCR 镜像部署必须把 `CANVAS_IMAGE_TAG` 固定到具体 Release，并把 `CANVAS_BACKEND_IMAGE`、`CANVAS_WEB_IMAGE` 固定到所选 GHCR 或南大源的 digest，不可使用 `latest` 或仅使用可变 tag。首次安装时显式指定 Release：
+GHCR 镜像部署必须把 `CANVAS_IMAGE_TAG` 固定到具体 Release，并把 `CANVAS_BACKEND_IMAGE`、`CANVAS_WEB_IMAGE` 固定到所选 GHCR 或南大源的 digest，不可使用 `latest` 或仅使用可变 tag。发布仓库是 `empty616165/genvie`，镜像包为 `ghcr.io/empty616165/genvie-canvas-{web,backend,yingce-agent}`。首次安装时显式指定 Release：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Empty930306/-Genvie/main/scripts/install-server-image.sh \
-  | sudo env CANVAS_IMAGE_TAG=v1.8.7.3 bash
+curl -fsSL https://raw.githubusercontent.com/empty616165/genvie/main/scripts/install-server-image.sh \
+  | sudo env CANVAS_IMAGE_TAG=v1.8.7.5 bash
 ```
 
 已有部署只安装更新器时，先确认 `.env` 已包含两个 `@sha256:...` 镜像引用，再执行：
 
 ```bash
 cd /opt/open-ai-canvas
-curl -fsSL https://raw.githubusercontent.com/Empty930306/-Genvie/main/scripts/install-host-updater.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/empty616165/genvie/main/scripts/install-host-updater.sh | sudo bash
 ```
+
+`raw.githubusercontent.com` 在部分网络被阻断时，脚本本身也可以从 Release 资产取得，并通过 `GITHUB_PROXY` 加速下游下载：
+
+```bash
+curl -fsSL https://gh-proxy.com/https://raw.githubusercontent.com/empty616165/genvie/main/scripts/install-host-updater.sh \
+  | sudo env GITHUB_PROXY=https://gh-proxy.com/ REPOSITORY=empty616165/genvie bash
+```
+
+两个脚本内部都按「GitHub 加速前缀 → raw 直连 → Release 资产」的顺序下载 Compose、安装脚本和更新器二进制，任一路径成功即可继续；全部失败时才报错并列出各候选地址的失败原因。加速前缀只接受显式配置，不会自动选择第三方代理。
+
+重装 `install-host-updater.sh` 会重写 `/etc/open-ai-canvas-updater.env`，其中 `CANVAS_UPDATER_REPOSITORY` 取自 `REPOSITORY`（默认 `empty616165/genvie`），因此它也是把旧安装机从改名前的仓库地址迁移过来的入口。
 
 脚本会下载与当前 Release 匹配的 Linux amd64/arm64 二进制和 `SHA256SUMS`，生成随机 `CANVAS_UPDATER_TOKEN`，创建 systemd 服务、Socket 目录、状态目录和 `backups/`。Token 只保存在服务器 `.env` 与 root-only 更新器环境文件中。
 

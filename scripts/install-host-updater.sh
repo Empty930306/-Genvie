@@ -3,8 +3,11 @@
 set -Eeuo pipefail
 
 INSTALL_DIR="${INSTALL_DIR:-/opt/open-ai-canvas}"
-REPOSITORY="${REPOSITORY:-Empty930306/-Genvie}"
+# 发布仓库：Release 资产中的 Host Updater 二进制与 SHA256SUMS 都从这里下载。
+REPOSITORY="${REPOSITORY:-empty616165/genvie}"
 SOCKET_DIR="${CANVAS_UPDATER_SOCKET_DIR:-/run/open-ai-canvas-updater}"
+# 可为空的 GitHub 加速前缀，例如 https://gh-proxy.com/。
+GITHUB_PROXY="${GITHUB_PROXY:-}"
 UPDATER_BIN="/usr/local/bin/open-ai-canvas-host-updater"
 UPDATER_ENV="/etc/open-ai-canvas-updater.env"
 UPDATER_SERVICE="/etc/systemd/system/open-ai-canvas-updater.service"
@@ -41,8 +44,22 @@ read_image_tag() {
     fi
 }
 
+# GitHub 直连与加速前缀都是显式配置；不设置 GITHUB_PROXY 时只走直连。
+download_asset() {
+    local destination="$1"
+    local url="$2"
+    local candidate
+    for candidate in "${GITHUB_PROXY:+${GITHUB_PROXY%/}/$url}" "$url"; do
+        [[ -n "$candidate" ]] || continue
+        if curl -fsSL --connect-timeout 15 --max-time 120 "$candidate" -o "$destination"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 install_binary() {
-    local arch asset temporary checksum_file expected
+    local arch asset temporary checksum_file expected release_url
     case "$(uname -m)" in
         x86_64|amd64) arch="amd64" ;;
         aarch64|arm64) arch="arm64" ;;
@@ -51,8 +68,11 @@ install_binary() {
     asset="open-ai-canvas-host-updater-linux-${arch}"
     temporary="$(mktemp)"
     checksum_file="$(mktemp)"
-    curl -fsSL "https://github.com/${REPOSITORY}/releases/download/${RELEASE_TAG}/${asset}" -o "$temporary"
-    curl -fsSL "https://github.com/${REPOSITORY}/releases/download/${RELEASE_TAG}/SHA256SUMS" -o "$checksum_file"
+    release_url="https://github.com/${REPOSITORY}/releases/download/${RELEASE_TAG}"
+    download_asset "$temporary" "${release_url}/${asset}" \
+        || fail "下载 ${asset} 失败；可设置 GITHUB_PROXY（例如 https://gh-proxy.com/）后重试"
+    download_asset "$checksum_file" "${release_url}/SHA256SUMS" \
+        || fail "下载 SHA256SUMS 失败；可设置 GITHUB_PROXY（例如 https://gh-proxy.com/）后重试"
     expected="$(awk -v asset="$asset" '$2 == asset { print $1 }' "$checksum_file")"
     [[ "$expected" =~ ^[a-f0-9]{64}$ ]] || fail "Release 校验清单缺少 ${asset}"
     printf '%s  %s\n' "$expected" "$temporary" | sha256sum -c - >/dev/null || fail "Host Updater SHA-256 校验失败"
@@ -77,7 +97,9 @@ ensure_token() {
     fi
     [[ ${#token} -ge 32 ]] || fail "CANVAS_UPDATER_TOKEN 长度不足"
     umask 077
-    printf 'CANVAS_UPDATER_TOKEN=%s\nCANVAS_UPDATER_INSTALL_DIR=%s\nCANVAS_UPDATER_SOCKET=%s/updater.sock\n' "$token" "$INSTALL_DIR" "$SOCKET_DIR" > "$UPDATER_ENV"
+    # 显式写入仓库，重装脚本时即可修正旧安装遗留的仓库地址。
+    printf 'CANVAS_UPDATER_TOKEN=%s\nCANVAS_UPDATER_INSTALL_DIR=%s\nCANVAS_UPDATER_SOCKET=%s/updater.sock\nCANVAS_UPDATER_REPOSITORY=%s\n' \
+        "$token" "$INSTALL_DIR" "$SOCKET_DIR" "$REPOSITORY" > "$UPDATER_ENV"
 }
 
 install_service() {

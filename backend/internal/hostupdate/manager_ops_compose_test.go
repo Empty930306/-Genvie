@@ -11,15 +11,15 @@ import (
 // GitHub 允许仓库所有者含大写，但 OCI 镜像仓库名必须全小写，
 // 否则 docker 会以 invalid reference format 拒绝整个镜像清单检测。
 func TestImmutableImageRefsLowercasesOwner(t *testing.T) {
-	images := immutableImageRefs("Empty930306/-Genvie", "v1.8.7.3")
+	images := immutableImageRefs("Empty616165/genvie", "v1.8.7.5")
 	for _, image := range []string{images.backend, images.web, images.agent} {
-		if strings.Contains(image, "Empty930306") {
+		if strings.Contains(image, "Empty616165") {
 			t.Fatalf("owner was not lowercased: %s", image)
 		}
-		if !strings.HasPrefix(image, "ghcr.io/empty930306/genvie-canvas-") {
+		if !strings.HasPrefix(image, "ghcr.io/empty616165/genvie-canvas-") {
 			t.Fatalf("unexpected image reference: %s", image)
 		}
-		if !strings.HasSuffix(image, ":1.8.7.3") {
+		if !strings.HasSuffix(image, ":1.8.7.5") {
 			t.Fatalf("unexpected image tag: %s", image)
 		}
 	}
@@ -38,7 +38,7 @@ func TestPrepareTargetComposeFallsBackToReleaseAsset(t *testing.T) {
 		return sourceResponse(http.StatusOK, "services: {}\n"), nil
 	})
 
-	path, err := m.prepareTargetCompose("v1.8.7.3", Sources{"direct", "ghcr"})
+	path, err := m.prepareTargetCompose("v1.8.7.5", Sources{"direct", "ghcr"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestPrepareTargetComposeReportsEveryFailure(t *testing.T) {
 		return nil, io.ErrUnexpectedEOF
 	})
 
-	_, err := m.prepareTargetCompose("v1.8.7.3", Sources{"direct", "ghcr"})
+	_, err := m.prepareTargetCompose("v1.8.7.5", Sources{"direct", "ghcr"})
 	if err == nil {
 		t.Fatal("expected failure when every compose candidate is unreachable")
 	}

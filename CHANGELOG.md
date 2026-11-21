@@ -1,6 +1,13 @@
 # CHANGELOG
 ## Unreleased
 
+## v1.8.7.5
+- 仓库迁移：发布仓库由 `Empty930306/-Genvie` 变为 `empty616165/genvie`。Host Updater 默认仓库、三个安装脚本、部署 Compose 的 agent 回退镜像和文档统一指向新仓库，镜像包仍为 `ghcr.io/empty616165/genvie-canvas-{web,backend,yingce-agent}`。
+- 系统更新：修复 `v1.8.7.3`/`v1.8.7.4` Release 附带的 `docker-compose.deploy.yml` 中 agent 回退镜像仍指向已失效的 `ghcr.io/empty930306/...`（拉取返回 `DENIED`）的问题。
+- 部署脚本：一键部署与更新器安装脚本在 `raw.githubusercontent.com` 不可达时回退到同版本 Release 资产，并支持通过 `GITHUB_PROXY` 显式指定 GitHub 加速前缀；更新器环境文件显式写入 `CANVAS_UPDATER_REPOSITORY`，重装即可修正旧安装遗留的仓库地址。
+- 发版：Release 资产新增 `install-server-image.sh` 与 `install-host-updater.sh`，使被墙网络也能仅依赖 `github.com` 完成安装。
+- 品牌与链接：README、欢迎页、贡献者入口、安全管理、Issue 模板和默认 User-Agent 中的仓库地址切换到新仓库。
+
 ## v1.8.7.4
 - 系统更新：修复镜像清单检测对含大写的仓库所有者生成非法 OCI 引用（`invalid reference format`）的问题，统一将所有者小写化。
 - 系统更新：目标 Compose 下载在 `raw.githubusercontent.com` 不可达时回退到同版本 Release 资产，避免单个域名被阻断导致整项检测失败，并在错误中保留每个候选地址的失败原因。

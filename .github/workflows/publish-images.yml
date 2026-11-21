@@ -250,6 +250,10 @@ jobs:
             dist/open-ai-canvas-host-updater-linux-arm64
             dist/SHA256SUMS
             docker-compose.deploy.yml
+            # raw.githubusercontent.com 在部分网络被阻断，安装脚本本身也随 Release 发布，
+            # 让一键安装与更新器重装可以只依赖 github.com/releases。
+            scripts/install-server-image.sh
+            scripts/install-host-updater.sh
           )
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber

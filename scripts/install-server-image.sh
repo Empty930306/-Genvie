@@ -3,16 +3,20 @@
 set -Eeuo pipefail
 
 REPOSITORY_REF="${REPOSITORY_REF:-main}"
+# 发布仓库：CI 从该仓库推送 genvie-canvas-* 镜像并创建 Release。
+REPOSITORY="${REPOSITORY:-empty616165/genvie}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/open-ai-canvas}"
 CANVAS_HTTP_PORT="${CANVAS_HTTP_PORT:-3000}"
 REQUESTED_IMAGE_TAG="${CANVAS_IMAGE_TAG:-}"
 CANVAS_IMAGE_TAG="${REQUESTED_IMAGE_TAG#v}"
-IMAGE_REPOSITORY="${IMAGE_REPOSITORY:-ghcr.io/empty930306/genvie-canvas}"
+IMAGE_REPOSITORY="${IMAGE_REPOSITORY:-ghcr.io/empty616165/genvie-canvas}"
 CANVAS_BACKEND_IMAGE=""
 CANVAS_WEB_IMAGE=""
 COMPOSE_FILE="docker-compose.deploy.yml"
-COMPOSE_URL="${COMPOSE_URL:-https://raw.githubusercontent.com/Empty930306/-Genvie/${REPOSITORY_REF}/${COMPOSE_FILE}}"
-UPDATER_INSTALL_URL="${UPDATER_INSTALL_URL:-https://raw.githubusercontent.com/Empty930306/-Genvie/${REPOSITORY_REF}/scripts/install-host-updater.sh}"
+# 可为空的 GitHub 加速前缀，例如 https://gh-proxy.com/。
+GITHUB_PROXY="${GITHUB_PROXY:-}"
+COMPOSE_URL="${COMPOSE_URL:-}"
+UPDATER_INSTALL_URL="${UPDATER_INSTALL_URL:-}"
 
 step() {
     printf '\n==> %s\n' "$1"
@@ -173,20 +177,70 @@ set_env_value() {
     mv "$temporary" "$path"
 }
 
+# GitHub 加速前缀只接受显式配置；空值表示直连，不猜测第三方代理。
+with_proxy() {
+    local url="$1"
+    if [[ -n "$GITHUB_PROXY" ]]; then
+        printf '%s%s' "${GITHUB_PROXY%/}/" "$url"
+    else
+        printf '%s' "$url"
+    fi
+}
+
+# Release 资产与 raw 内容同源同版本；raw.githubusercontent.com 被阻断时用它兜底。
+release_asset_url() {
+    printf 'https://github.com/%s/releases/download/v%s/%s' "$REPOSITORY" "$CANVAS_IMAGE_TAG" "$1"
+}
+
+# 依次尝试候选地址，全部失败时返回非零，由调用方给出可操作提示。
+download_url() {
+    local destination="$1"
+    shift
+    local candidate
+    for candidate in "$@"; do
+        [[ -n "$candidate" ]] || continue
+        if curl -fsSL --connect-timeout 15 --max-time 60 "$candidate" -o "$destination"; then
+            return 0
+        fi
+        printf '下载失败，继续尝试其他地址：%s\n' "$candidate" >&2
+    done
+    return 1
+}
+
 download_compose() {
     step "下载 GHCR 镜像部署配置"
-    local temporary_file
+    local temporary_file raw_url release_url
     temporary_file="$(mktemp "${INSTALL_DIR}/.docker-compose.deploy.XXXXXX")"
-    curl -fsSL "$COMPOSE_URL" -o "$temporary_file"
+    raw_url="https://raw.githubusercontent.com/${REPOSITORY}/${REPOSITORY_REF}/${COMPOSE_FILE}"
+    release_url="$(release_asset_url "$COMPOSE_FILE")"
+    if [[ -n "$COMPOSE_URL" ]]; then
+        download_url "$temporary_file" "$COMPOSE_URL" || fail "下载部署配置失败：${COMPOSE_URL}"
+    elif ! download_url "$temporary_file" \
+        "$(with_proxy "$raw_url")" \
+        "$raw_url" \
+        "$(with_proxy "$release_url")" \
+        "$release_url"; then
+        fail "下载部署配置失败；可使用 GITHUB_PROXY（例如 https://gh-proxy.com/）或直接指定 COMPOSE_URL"
+    fi
     mv "$temporary_file" "$COMPOSE_FILE"
 }
 
 install_host_updater() {
     step "安装宿主机在线更新服务"
-    local installer
+    local installer raw_url release_url
     installer="$(mktemp)"
-    curl -fsSL "$UPDATER_INSTALL_URL" -o "$installer"
-    INSTALL_DIR="$INSTALL_DIR" bash "$installer"
+    raw_url="https://raw.githubusercontent.com/${REPOSITORY}/${REPOSITORY_REF}/scripts/install-host-updater.sh"
+    release_url="$(release_asset_url "install-host-updater.sh")"
+    if [[ -n "$UPDATER_INSTALL_URL" ]]; then
+        download_url "$installer" "$UPDATER_INSTALL_URL" || fail "下载更新器安装脚本失败：${UPDATER_INSTALL_URL}"
+    elif ! download_url "$installer" \
+        "$(with_proxy "$raw_url")" \
+        "$raw_url" \
+        "$(with_proxy "$release_url")" \
+        "$release_url"; then
+        fail "下载更新器安装脚本失败；可使用 GITHUB_PROXY（例如 https://gh-proxy.com/）或直接指定 UPDATER_INSTALL_URL"
+    fi
+    INSTALL_DIR="$INSTALL_DIR" REPOSITORY="$REPOSITORY" bash "$installer"
     rm -f "$installer"
 
     step "重建 backend 以启用在线更新"
