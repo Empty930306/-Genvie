@@ -72,24 +72,44 @@ func (m *Manager) currentVersion() (string, error) {
 	return version, nil
 }
 
+// targetComposeURLs 按优先级返回目标 Compose 的候选地址。
+// 部分网络环境会阻断 raw.githubusercontent.com，而 Release 资产同时附带同一份 Compose，
+// 因此 raw 失败时回退到 Release 资产，避免整项检测因单个域名不可达而失败。
+func (m *Manager) targetComposeURLs(targetVersion string) []string {
+	return []string{
+		fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s", m.config.Repository, targetVersion, m.config.ComposeFile),
+		fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", m.config.Repository, targetVersion, m.config.ComposeFile),
+	}
+}
+
 func (m *Manager) prepareTargetCompose(targetVersion string, sources Sources) (string, error) {
-	url := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s", m.config.Repository, targetVersion, m.config.ComposeFile)
-	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
-	defer cancel()
-	response, err := m.githubGet(ctx, url, sources, "")
-	if err != nil {
-		return "", fmt.Errorf("下载目标 Compose：%w", err)
+	var data []byte
+	var failures []string
+	for _, url := range m.targetComposeURLs(targetVersion) {
+		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		response, err := m.githubGet(ctx, url, sources, "")
+		if err == nil {
+			body, readErr := io.ReadAll(io.LimitReader(response.Body, (2<<20)+1))
+			response.Body.Close()
+			switch {
+			case readErr != nil:
+				err = readErr
+			case len(body) == 0:
+				err = errors.New("目标 Compose 文件为空")
+			case len(body) > 2<<20:
+				err = errors.New("目标 Compose 文件超过允许大小")
+			default:
+				data = body
+			}
+		}
+		cancel()
+		if data != nil {
+			break
+		}
+		failures = append(failures, err.Error())
 	}
-	defer response.Body.Close()
-	data, err := io.ReadAll(io.LimitReader(response.Body, (2<<20)+1))
-	if err != nil {
-		return "", err
-	}
-	if len(data) == 0 {
-		return "", errors.New("目标 Compose 文件为空")
-	}
-	if len(data) > 2<<20 {
-		return "", errors.New("目标 Compose 文件超过允许大小")
+	if data == nil {
+		return "", fmt.Errorf("下载目标 Compose：%s", strings.Join(failures, "；"))
 	}
 	path := filepath.Join(m.config.StateDir, "compose-"+strings.TrimPrefix(targetVersion, "v")+".next.yml")
 	if err := os.WriteFile(path, data, 0o600); err != nil {
@@ -233,7 +253,8 @@ type deploymentImages struct {
 }
 
 func immutableImageRefs(repository, version string) deploymentImages {
-	owner := strings.SplitN(repository, "/", 2)[0]
+	// 仓库所有者按 GitHub 规则可能含大写，但 OCI 仓库名必须全小写；CI 推送时也做了同样的小写化。
+	owner := strings.ToLower(strings.SplitN(repository, "/", 2)[0])
 	tag := strings.TrimPrefix(version, "v")
 	return deploymentImages{
 		backend: "ghcr.io/" + owner + "/genvie-canvas-backend:" + tag,

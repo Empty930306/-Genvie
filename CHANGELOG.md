@@ -1,6 +1,10 @@
 # CHANGELOG
 ## Unreleased
 
+## v1.8.7.4
+- 系统更新：修复镜像清单检测对含大写的仓库所有者生成非法 OCI 引用（`invalid reference format`）的问题，统一将所有者小写化。
+- 系统更新：目标 Compose 下载在 `raw.githubusercontent.com` 不可达时回退到同版本 Release 资产，避免单个域名被阻断导致整项检测失败，并在错误中保留每个候选地址的失败原因。
+
 ## v1.8.7.3
 - 发版与更新：容器镜像包名改为本仓库独占的 `genvie-canvas-web`、`genvie-canvas-backend`、`genvie-canvas-yingce-agent`，解决 GHCR 同名包被其他仓库占用导致 `write_package` 拒绝；更新器与一键部署脚本同步使用新包名。
 
