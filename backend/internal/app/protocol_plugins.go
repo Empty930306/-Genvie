@@ -102,7 +102,11 @@ type requestPackageVersion struct {
 	SHA256  string `json:"sha256"`
 }
 
-func retainRequestPackage(record pluginRegistryRecord, next protocol.Manifest, digest string) ([]requestPackageVersion, error) {
+// retainRequestPackage 决定请求插件升级时如何保留历史版本。
+// strict 用于用户上传路径：同一版本号出现不同包摘要时必须拒绝，防止用同版本覆盖已安装插件。
+// 官方内置插件重打包（例如品牌改名）会改变字节但保持版本号，bootstrap 以随镜像发布的官方包
+// 为权威，因此以 strict=false 调用，直接以新摘要替换同一版本的记录，避免升级后无法启动。
+func retainRequestPackage(record pluginRegistryRecord, next protocol.Manifest, digest string, strict bool) ([]requestPackageVersion, error) {
 	history := append([]requestPackageVersion(nil), record.History...)
 	if record.PackageSHA256 == "" || record.PackagePath == "" {
 		return history, nil
@@ -119,7 +123,7 @@ func retainRequestPackage(record pluginRegistryRecord, next protocol.Manifest, d
 	}
 	if previous.Metadata.Version != next.Metadata.Version {
 		history = append(history, requestPackageVersion{Version: previous.Metadata.Version, SHA256: record.PackageSHA256})
-	} else if record.PackageSHA256 != digest {
+	} else if record.PackageSHA256 != digest && strict {
 		return nil, fmt.Errorf("请求插件 %s@%s 已安装，但包摘要不同；请发布新版本", record.ID, next.Metadata.Version)
 	}
 	for index, release := range history {
@@ -127,7 +131,10 @@ func retainRequestPackage(record pluginRegistryRecord, next protocol.Manifest, d
 			continue
 		}
 		if release.SHA256 != digest {
-			return nil, fmt.Errorf("请求插件 %s@%s 已安装，但包摘要不同；请发布新版本", record.ID, release.Version)
+			if strict {
+				return nil, fmt.Errorf("请求插件 %s@%s 已安装，但包摘要不同；请发布新版本", record.ID, release.Version)
+			}
+			continue
 		}
 		return append(history[:index], history[index+1:]...), nil
 	}
@@ -214,7 +221,7 @@ func (c *pluginRuntime) bootstrapBuiltInPlugins() error {
 			return fmt.Errorf("编码官方插件 %q：%w", id, err)
 		}
 		hash := official.hash
-		record.History, err = retainRequestPackage(record, manifest, hash)
+		record.History, err = retainRequestPackage(record, manifest, hash, false)
 		if err != nil {
 			return err
 		}
@@ -908,7 +915,7 @@ func (c *pluginRuntime) install(data []byte, fileName string) (PluginView, error
 				}
 			}
 		}
-		newRecord.History, err = retainRequestPackage(old, manifest, hash)
+		newRecord.History, err = retainRequestPackage(old, manifest, hash, true)
 		if err != nil {
 			return PluginView{}, err
 		}

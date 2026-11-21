@@ -1,6 +1,9 @@
 # CHANGELOG
 ## Unreleased
 
+## v1.8.7.6
+- 系统更新：修复官方内置请求插件重打包后升级无法启动的问题。内置插件以镜像内的官方包为权威，同一版本号下的摘要变化不再中断启动；用户上传路径仍拒绝同版本不同摘要。
+
 ## v1.8.7.5
 - 仓库迁移：发布仓库由 `Empty930306/-Genvie` 变为 `empty616165/genvie`。Host Updater 默认仓库、三个安装脚本、部署 Compose 的 agent 回退镜像和文档统一指向新仓库，镜像包仍为 `ghcr.io/empty616165/genvie-canvas-{web,backend,yingce-agent}`。
 - 系统更新：修复 `v1.8.7.3`/`v1.8.7.4` Release 附带的 `docker-compose.deploy.yml` 中 agent 回退镜像仍指向已失效的 `ghcr.io/empty930306/...`（拉取返回 `DENIED`）的问题。
