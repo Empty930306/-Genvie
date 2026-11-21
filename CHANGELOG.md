@@ -1,6 +1,9 @@
 # CHANGELOG
 ## Unreleased
 
+## v1.8.7.10
+- 系统更新：Compose 改为优先读取 Release 资产，`raw.githubusercontent.com` 降为回退。该网络下 raw 读取会被重置且 HTTP/2 等待响应头反复超时，实测 Release 资产稳定。
+
 ## v1.8.7.9
 - 系统更新：进一步加固 GitHub 资源下载。连接不复用空闲连接（该网络下约半数连接建立后读不到响应），传输层失败最多尝试 6 次，Compose 与资产读取时限放宽到 3-5 分钟，并按链路实测放宽响应头超时。
 

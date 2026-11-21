@@ -73,12 +73,12 @@ func (m *Manager) currentVersion() (string, error) {
 }
 
 // targetComposeURLs 按优先级返回目标 Compose 的候选地址。
-// 部分网络环境会阻断 raw.githubusercontent.com，而 Release 资产同时附带同一份 Compose，
-// 因此 raw 失败时回退到 Release 资产，避免整项检测因单个域名不可达而失败。
+// CI 每次发版都会把同一份 Compose 作为 Release 资产上传，该路径实测稳定；
+// raw.githubusercontent.com 在部分网络读取会被重置，因此作为回退候选。
 func (m *Manager) targetComposeURLs(targetVersion string) []string {
 	return []string{
-		fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s", m.config.Repository, targetVersion, m.config.ComposeFile),
 		fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", m.config.Repository, targetVersion, m.config.ComposeFile),
+		fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s", m.config.Repository, targetVersion, m.config.ComposeFile),
 	}
 }
 

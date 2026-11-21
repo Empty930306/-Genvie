@@ -3,6 +3,7 @@ package hostupdate
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -111,16 +112,17 @@ func NewManager(config Config) (*Manager, error) {
 		runner: execRunner{dir: config.InstallDir},
 		// Client.Timeout 会连 body 读取一起计时，而 Release 二进制可达数 MB；
 		// 总时长交给每个调用方的 context 控制，这里只限制建立连接与等待响应头。
-		// GitHub 在部分网络下有较大概率返回半死连接（连接建立后读不到响应），
-		// 因此不复用空闲连接，让每次尝试都走全新 TCP，配合 githubGet 的有限重试。
+		// 该网络下 HTTP/2 会在等待响应头时反复超时，实测 HTTP/1.1 明显更稳，
+		// 因此关闭 HTTP/2 并禁用空闲连接复用，让每次尝试都走全新 TCP。
 		httpClient: &http.Client{Transport: &http.Transport{
 			Proxy:                 http.ProxyFromEnvironment,
 			DialContext:           (&net.Dialer{Timeout: 15 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
 			TLSHandshakeTimeout:   15 * time.Second,
-			ResponseHeaderTimeout: 20 * time.Second,
+			ResponseHeaderTimeout: 25 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
 			DisableKeepAlives:     true,
-			ForceAttemptHTTP2:     true,
+			ForceAttemptHTTP2:     false,
+			TLSNextProto:          map[string]func(string, *tls.Conn) http.RoundTripper{},
 		}},
 		state: persistedState{Operation: Operation{Phase: PhaseIdle, Logs: []LogEntry{}}},
 	}

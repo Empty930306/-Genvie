@@ -26,14 +26,14 @@ func TestImmutableImageRefsLowercasesOwner(t *testing.T) {
 	}
 }
 
-// raw.githubusercontent.com 在部分网络被封禁，Release 资产包含同一份 Compose，
-// 因此首个地址失败（含一次传输层重试）后必须继续尝试后续候选地址，而不是让整项检测失败。
+// raw.githubusercontent.com 在部分网络读取会被重置，Release 资产包含同一份 Compose。
+// 首要候选必须是 Release 资产；它失败时才回退到 raw，两者都失败才报错。
 func TestPrepareTargetComposeFallsBackToReleaseAsset(t *testing.T) {
 	m := sourceManager(t)
 	var hosts []string
 	m.httpClient.Transport = sourceTransport(func(r *http.Request) (*http.Response, error) {
 		hosts = append(hosts, r.URL.Host)
-		if r.URL.Host == "raw.githubusercontent.com" {
+		if r.URL.Host == "github.com" {
 			return nil, io.ErrUnexpectedEOF
 		}
 		return sourceResponse(http.StatusOK, "services: {}\n"), nil
@@ -44,17 +44,16 @@ func TestPrepareTargetComposeFallsBackToReleaseAsset(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(path)
-	// raw 站点不可达时必须耗尽重试再回退，不能只试一次就失败提交给用户。
 	if len(hosts) < 2 {
 		t.Fatalf("expected retries before fallback, got %#v", hosts)
 	}
 	for _, host := range hosts[:len(hosts)-1] {
-		if host != "raw.githubusercontent.com" {
+		if host != "github.com" {
 			t.Fatalf("fallback happened before exhausting retries: %#v", hosts)
 		}
 	}
-	if hosts[len(hosts)-1] != "github.com" {
-		t.Fatalf("last candidate must be the Release asset host: %#v", hosts)
+	if hosts[len(hosts)-1] != "raw.githubusercontent.com" {
+		t.Fatalf("last candidate must be raw fallback: %#v", hosts)
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
