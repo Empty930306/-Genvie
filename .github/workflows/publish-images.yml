@@ -89,17 +89,17 @@ jobs:
       matrix:
         include:
           # Web 的构建阶段固定 BUILDPLATFORM，静态文件只编译一次。
-          - image: open-ai-canvas-web
+          - image: genvie-canvas-web
             dockerfile: Dockerfile
             arch: amd64
             platforms: linux/amd64
             runner: ubuntu-latest
-          - image: open-ai-canvas-backend
+          - image: genvie-canvas-backend
             dockerfile: backend/Dockerfile
             arch: amd64
             platforms: linux/amd64
             runner: ubuntu-latest
-          - image: open-ai-canvas-yingce-agent
+          - image: genvie-canvas-yingce-agent
             dockerfile: yingce-agent/Dockerfile
             arch: amd64
             platforms: linux/amd64
@@ -169,7 +169,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [open-ai-canvas-web, open-ai-canvas-backend, open-ai-canvas-yingce-agent]
+        image: [genvie-canvas-web, genvie-canvas-backend, genvie-canvas-yingce-agent]
     # 不同提交可并行编译，但同一镜像的可变标签更新必须串行。
     concurrency:
       group: image-tags-${{ matrix.image }}-${{ github.ref }}

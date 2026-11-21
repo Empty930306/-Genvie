@@ -1,6 +1,9 @@
 # CHANGELOG
 ## Unreleased
 
+## v1.8.7.3
+- 发版与更新：容器镜像包名改为本仓库独占的 `genvie-canvas-web`、`genvie-canvas-backend`、`genvie-canvas-yingce-agent`，解决 GHCR 同名包被其他仓库占用导致 `write_package` 拒绝；更新器与一键部署脚本同步使用新包名。
+
 ## v1.8.7.2
 - 外观与首页：调整创作页欢迎标语的分词与断句，支持"在这里造境，让灵感，慢慢成形"等自定义文案排版；优化首页与画布工具栏、悬浮输入区的显示。
 - 发版与更新：系统更新源与 GitHub 发版流程切换到 `Empty930306/-Genvie`，容器镜像由本仓库 CI 构建并发布。

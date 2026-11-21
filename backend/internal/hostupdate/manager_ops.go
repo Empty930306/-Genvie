@@ -236,9 +236,9 @@ func immutableImageRefs(repository, version string) deploymentImages {
 	owner := strings.SplitN(repository, "/", 2)[0]
 	tag := strings.TrimPrefix(version, "v")
 	return deploymentImages{
-		backend: "ghcr.io/" + owner + "/open-ai-canvas-backend:" + tag,
-		web:     "ghcr.io/" + owner + "/open-ai-canvas-web:" + tag,
-		agent:   "ghcr.io/" + owner + "/open-ai-canvas-yingce-agent:" + tag,
+		backend: "ghcr.io/" + owner + "/genvie-canvas-backend:" + tag,
+		web:     "ghcr.io/" + owner + "/genvie-canvas-web:" + tag,
+		agent:   "ghcr.io/" + owner + "/genvie-canvas-yingce-agent:" + tag,
 	}
 }
 
