@@ -3,6 +3,7 @@ import { useUserStore } from "@/stores/use-user-store";
 import { validateChannelModelPrices, type ChannelModelFormValues } from "./channel-model-editor-form";
 import { defaultPriceTier, defaultTokenPriceRule } from "./channel-model-price-tier-form";
 import { validImagePricingForm } from "@/lib/image-usage-pricing";
+import { createClientUUID } from "@/lib/client-id";
 
 export type PricingSnapshot = Pick<ChannelModelFormValues, "priceTiers" | "priceCurrency" | "referenceVideoBilling">;
 export type SavedPricingTemplate = { id: string; revision: string; name: string; capability: ChannelModelFormValues["capability"]; pricing: PricingSnapshot };
@@ -111,7 +112,7 @@ export function savePricingTemplate(scope: string, name: string, values: Channel
     if (previous && !templates.some((item) => item.id === previous.id && item.revision === previous.revision)) throw new Error("模板已被修改，请关闭后重新编辑");
     if (!previous && templates.length >= 32) throw new Error("最多保存 32 个积分模板");
     if (templates.some((item) => item.id !== previous?.id && item.capability === values.capability && item.name.toLowerCase() === name.toLowerCase())) throw new Error("模板名称已存在，请换一个名称");
-    const template: SavedPricingTemplate = { id: previous?.id || crypto.randomUUID(), revision: crypto.randomUUID(), name, capability: values.capability, pricing: pricingSnapshot(values) };
+    const template: SavedPricingTemplate = { id: previous?.id || createClientUUID(), revision: createClientUUID(), name, capability: values.capability, pricing: pricingSnapshot(values) };
     validateChannelModelPrices({ ...values, ...template.pricing });
     const next = previous ? templates.map((item) => (item.id === previous.id ? template : item)) : [...templates, template];
     const serialized = JSON.stringify({ version: 1, templates: next });

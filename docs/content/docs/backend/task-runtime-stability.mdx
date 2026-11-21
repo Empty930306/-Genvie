@@ -86,6 +86,16 @@ worker 在准备模型路由前重新读取自定义渠道开关，覆盖首次�
 - 生成视频登记为素材只依赖资源展示地址；整段下载到浏览器的 Blob 缓存改为后台预热，大视频超时或对象存储跨域读取失败不再让已落库的作品显示为失败。画布节点回写仍单独校验视频缓存。
 - 这些路径只改变前端状态收敛方式，不新增接口、数据库字段或迁移；任务真实状态仍以后端为准。
 
+### 非安全上下文的浏览器能力降级
+
+`crypto.subtle` 和 `navigator.locks` 只在安全上下文（HTTPS 或 localhost）暴露。通过 `http://局域网IP:端口` 访问时二者均为 `undefined`，而生成结果的素材 ID 由 `sha256("materialize:<taskId>:<index>")` 派生，缺失 `crypto.subtle` 会直接抛 `Cannot read properties of undefined (reading 'digest')`，导致任务成功后页面接不回结果、作品只出现在素材库。
+
+- `web/src/lib/digest.ts` 提供 `sha256Hex`：优先使用 `crypto.subtle`，缺失或不支持时回退到纯 JS SHA-256。算法必须与后端 `generationMediaAssetID`（`backend/internal/app/task_media_assets.go`）逐字节一致，不能替换成只求唯一的散列，否则前后端素材 ID 不同。
+- 画布内容哈希、重试上下文、Agent 续写标识、历史与会话媒体上传、看图上传都改走同一函数；HTTP 与 HTTPS 下同一份内容得到同一摘要，`remoteContentHash` 比对不再因访问协议不同而失效。
+- `crypto.randomUUID` 同理；缺少时统一使用 `web/src/lib/client-id.ts` 的 `createClientUUID`（基于 `getRandomValues`）。
+- 这类失败发生在浏览器本地，`generation-error.ts` 不再把它报成"模型服务处理失败"，避免用户被引导去换模型或重复付费。
+- 降级只保证单标签可用：Web Locks 缺失时跨标签互斥退化为进程内互斥，多标签同时处理同一任务仍可能重复落库。生产部署应使用 HTTPS。
+
 ## 热点读取保护
 
 | 读路径 | 缓存 / 回源限制 | 故障行为 |

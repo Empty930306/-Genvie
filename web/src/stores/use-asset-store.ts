@@ -6,6 +6,7 @@ import type { AssetCategory } from "@/lib/asset-category";
 import { parseAssetRecord } from "@/lib/asset-record";
 import { parseAssetStorageDocumentRecovering, rebaseAssetSnapshot, serializeAssetStorageDocument, type AssetStorageDocument } from "@/lib/asset-storage-revision";
 import { parseCanvasStorageDocument } from "@/lib/canvas/canvas-storage-revision";
+import { sha256Hex } from "@/lib/digest";
 import { localForageStorageForScope } from "@/lib/localforage-storage";
 import { getActiveUserScope } from "@/lib/user-scope";
 import { resourceFileUrl, resourceIdFromStorageKey } from "@/services/api/resources";
@@ -328,8 +329,7 @@ async function normalizePersistedAsset(asset: Asset): Promise<Asset> {
 }
 
 export async function generationAssetId(effectKey: string) {
-    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(effectKey));
-    return `generation_${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+    return `generation_${await sha256Hex(effectKey)}`;
 }
 
 export const useAssetStore = create<AssetStore>()(

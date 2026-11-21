@@ -5,6 +5,7 @@ import { Alert, App, Button, Input, Select, Table } from "antd";
 import { PageHeader } from "@/components/layout/workspace-page";
 import { AppModal } from "@/components/ui/product/app-modal";
 import { parseTeamCreditAmount, teamCredits, teamKeys } from "@/lib/team-query-keys";
+import { createClientUUID } from "@/lib/client-id";
 import { getTeamLedger, getTeamWallet, listTeamMembers, transferTeamCredits, type TeamLedgerEntry, type TeamSummary } from "@/services/api/teams";
 import { useUserStore } from "@/stores/use-user-store";
 
@@ -29,7 +30,7 @@ export function TeamWalletPane() {
     const [amount, setAmount] = useState("");
     const openTransfer = (action: TransferAction, membershipId?: string) => {
         setAmount("");
-        setForm({ action, membershipId, idempotencyKey: crypto.randomUUID() });
+        setForm({ action, membershipId, idempotencyKey: createClientUUID() });
     };
     const parsedAmount = parseTeamCreditAmount(amount);
     const transfer = useMutation({
@@ -170,7 +171,7 @@ export function TeamWalletPane() {
                                 value={form.membershipId}
                                 disabled={transfer.isPending}
                                 options={members.data?.map((member) => ({ value: member.id, label: `${member.displayName || member.username} (@${member.username})` }))}
-                                onChange={(membershipId) => setForm({ ...form, membershipId, idempotencyKey: crypto.randomUUID() })}
+                                onChange={(membershipId) => setForm({ ...form, membershipId, idempotencyKey: createClientUUID() })}
                             />
                         </label>
                     ) : null}
@@ -183,7 +184,7 @@ export function TeamWalletPane() {
                             placeholder="例如 100"
                             onChange={(event) => {
                                 setAmount(event.target.value);
-                                if (form) setForm({ ...form, idempotencyKey: crypto.randomUUID() });
+                                if (form) setForm({ ...form, idempotencyKey: createClientUUID() });
                             }}
                             suffix="积分"
                         />

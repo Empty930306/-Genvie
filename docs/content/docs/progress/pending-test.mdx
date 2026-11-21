@@ -4,13 +4,27 @@ description: 当前项目已实现功能的手工验证清单与未确认边界
 ---
 
 # 待测试
+## HTTP 访问下的生成结果接回
+
+- [ ] 用 `http://<局域网IP>:<端口>` 访问（非 HTTPS、非 localhost，`isSecureContext === false`、`crypto.subtle === undefined`）完整跑一次图片/视频生成：创作页应直接显示结果，不再出现"结果暂未同步 / 模型服务处理失败"。
+- [ ] 同一环境下点「重新获取结果」，把本次修复前已卡住的旧任务接回；确认不会重新生成、不会重复扣费。
+- [ ] 同一环境下确认重试生成、画布 Agent 续写、会话历史带内嵌媒体的保存都不再报错。
+- [ ] 控制台仍会打印"非安全上下文……已降级为单标签互斥"告警；确认单标签可用，且这是预期降级而非报错。
+- [ ] 切换到 HTTPS（或 localhost）后，同一账号下生成结果、画布内容哈希与 HTTP 下保持一致，不出现重复素材或"云端有改动"误判。
+
 ## 上游世界引擎合并与本仓库发版
 
 - [ ] `v1.8.7.6` CI 通过后，确认 Release 资产与 `ghcr.io/empty616165/genvie-canvas-{web,backend,yingce-agent}:1.8.7.6` 可用，且 `docker-compose.deploy.yml` 中 agent 回退镜像仍指向 `ghcr.io/empty616165/`。
-- [ ] 已有部署升级到 `v1.8.7.6` 后能正常启动：本次官方内置插件因品牌改名重新打包，包摘要变化但版本号不变；确认 `protocol_plugins.go` 的 `strict=false` 路径生效，启动不再报「请求插件 @ 已安装，但包摘要不同」。
+- [x] 已有部署升级到 `v1.8.7.10` 后正常启动：官方内置插件因品牌改名重新打包，包摘要变化但版本号不变；`protocol_plugins.go` 的 `strict=false` 路径生效，`backend listening` 正常输出，日志中「包摘要不同」出现 0 次，插件注册表 `official` 项由 116 增至 118 且 `a6api` 摘要已更新。
 - [ ] 浏览器实测世界引擎：新建场景选模板、摆场/动画模式切换、摄影机运镜配方、画运镜路径、A→B 位移、Agent 镜头检查与白模/深度转码输出。
 - [ ] 渠道插件实测：MiniMax 语音合成、EvoLink 豆包 Seed Audio 1.0、EvoLink Qwen Audio 3.1 TTS Flash 的创建、轮询、失败消息与结果下载。
 - [ ] 短剧实测：精修画布按剧情段分组排图并刷新项目资产；段视频尾帧续接按插件声明的路由处理，核对实际出站图片编号。
+
+## 系统更新在受限网络下的下载链路
+
+- [x] `192.168.19.28` 实测：`raw.githubusercontent.com` 读取常被 RST、`github.com` 偶发 HTTP/2 等待响应头超时。Host Updater 已改为优先读取 Release 资产、禁用 HTTP/2 与空闲连接复用、对传输层失败最多重试 6 次，Compose 与资产读取时限分别放宽到 3 分钟和 5 分钟。
+- [x] 该机器后台「系统更新 → 测试联通性」六项一次全绿（目标 `v1.8.7.10`），随后执行更新成功：`.env` 三个镜像变量变为 `ghcr.io/empty616165/genvie-canvas-{backend,web,yingce-agent}@sha256:` 不可变引用，`CANVAS_IMAGE_TAG=1.8.7.10`，`/api/health` 返回 `build.version=v1.8.7.10`、`commit=a5b63471`、schema 109/109 就绪，`1888` 首页 200，容器全部 healthy。
+- [ ] 其他网络环境复核：确认新增的重试与 HTTP/1.1 降级不会在 `raw` 可用的环境里拖慢首次检测；`gh_proxy` 源仍受共享 API 配额限制，配额耗尽时第 1 项会失败并短路上报。
 
 ## 世界引擎：删除运镜、画运镜路径、时间轴开合
 
@@ -123,7 +137,7 @@ description: 当前项目已实现功能的手工验证清单与未确认边界
 
 - [ ] `empty616165/genvie` 推送 `v1.8.7.5` 后，确认 CI 产出 `ghcr.io/empty616165/genvie-canvas-{web,backend,yingce-agent}:1.8.7.5` 与 Release `v1.8.7.5`；Release 资产应包含 `install-server-image.sh`、`install-host-updater.sh`，且 `docker-compose.deploy.yml` 中 agent 回退镜像已是 `ghcr.io/empty616165/genvie-canvas-yingce-agent`。
 - [ ] 在屏蔽 `raw.githubusercontent.com` 的网络环境执行一键安装，确认脚本回退到 Release 资产下载 Compose 与更新器安装脚本，并成功拉取三个镜像。
-- [ ] 旧安装机重装 `install-host-updater.sh` 后，`/etc/open-ai-canvas-updater.env` 的 `CANVAS_UPDATER_REPOSITORY` 为 `empty616165/genvie`；后台「系统更新 → 测试联通性」六项全绿，再执行更新，确认 `.env` 三个镜像变量变为新包名 `@sha256:` 引用，`/api/health` 显示 `v1.8.7.5`，`1888` 端口服务未中断。
+- [x] 旧安装机（`192.168.19.28`）已把 `CANVAS_UPDATER_REPOSITORY` 改为 `empty616165/genvie`；后台「系统更新 → 测试联通性」六项全绿后执行更新成功，`.env` 三个镜像变量为 `ghcr.io/empty616165/genvie-canvas-{backend,web,yingce-agent}@sha256:` 引用，`/api/health` 的 `build.version` 为 `v1.8.7.10`，`1888` 端口服务未中断，容器全部 healthy。
 
 
 ## 图片与视频节点的分栏工具菜单

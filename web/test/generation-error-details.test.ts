@@ -35,3 +35,21 @@ describe("safe upstream error details", () => {
         expect(generationErrorMessage("模型服务请求失败；上游：https://private.test")).toBe("模型服务请求失败");
     });
 });
+
+describe("浏览器能力缺失不等于模型失败", () => {
+    // 非安全上下文没有 crypto.subtle，取 digest 抛出的是浏览器本地异常，
+    // 不能引导用户换模型或重新付费生成。
+    test("crypto.subtle 缺失时提示改用 HTTPS，而不是模型服务失败", () => {
+        const error = new TypeError("Cannot read properties of undefined (reading 'digest')");
+        const message = generationErrorMessage(error);
+        expect(message).toContain("HTTPS");
+        expect(message).not.toContain("模型服务处理失败");
+    });
+    test("不同浏览器文案都能识别", () => {
+        expect(generationErrorMessage(new Error("crypto.subtle is undefined"))).toContain("HTTPS");
+        expect(generationErrorMessage(new Error("Cannot read property 'subtle' of undefined"))).toContain("HTTPS");
+    });
+    test("不把上游的 is not a function 误判为本地能力问题", () => {
+        expect(generationErrorMessage("upstream gateway: response.text is not a function")).not.toContain("HTTPS");
+    });
+});

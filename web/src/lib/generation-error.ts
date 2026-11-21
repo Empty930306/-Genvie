@@ -11,6 +11,9 @@ const USER_VISIBLE_TASK_ID_PATTERN = /\btask[_-][a-z0-9][a-z0-9_-]{2,}\b/gi;
 
 const DEFAULT_GENERATION_ERROR_MESSAGE = "生成失败，请稍后重试。";
 const NETWORK_ERROR_MESSAGE = "网络异常。";
+// 非安全上下文（http://局域网IP）没有 crypto.subtle / Web Locks 等能力。这类失败发生在
+// 浏览器本地，与模型渠道无关，不能报成"模型服务处理失败"去误导用户换模型、重复付费。
+const BROWSER_CAPABILITY_ERROR_MESSAGE = "当前访问地址（HTTP）限制了浏览器能力，无法取回或保存生成结果。请改用 HTTPS 或 localhost 访问后重试。";
 const MODEL_CAPABILITY_ERROR_MESSAGE = "所选模型不支持当前生成方式或输入，请切换模型或调整输入后重试。";
 const MODEL_PARAMETER_ERROR_MESSAGE = "当前模型不支持这组参数或参考素材，请调整输入或切换模型后重试。";
 const MODEL_SERVICE_ERROR_MESSAGE = "模型服务处理失败，请稍后重试或换用其他模型。";
@@ -101,8 +104,17 @@ export function generationErrorMessage(error: unknown) {
     if (isModelCapabilityFailure(displayMessage)) return MODEL_CAPABILITY_ERROR_MESSAGE;
     if (isModelParameterFailure(displayMessage)) return MODEL_PARAMETER_ERROR_MESSAGE;
     if (keepsProviderDetail(displayMessage)) return displayMessage;
+    if (isBrowserCapabilityFailure(displayMessage)) return BROWSER_CAPABILITY_ERROR_MESSAGE;
     if (isTechnicalProviderMessage(displayMessage)) return MODEL_SERVICE_ERROR_MESSAGE;
     return displayMessage || DEFAULT_GENERATION_ERROR_MESSAGE;
+}
+
+// 识别浏览器本地能力缺失。这类文案由 JS 运行时抛出，与模型渠道无关；
+// 例如 crypto.subtle 为 undefined 时取 digest 得到
+// "Cannot read properties of undefined (reading 'digest')"。
+// 只匹配明确的 Web API 名，避免把上游含 "subtle" 等字样的正常文案误判成本地问题。
+function isBrowserCapabilityFailure(value: string) {
+    return /crypto\.subtle|navigator\.locks|Cannot read propert[^\n]*['"](?:subtle|digest|locks)['"]/i.test(value);
 }
 
 function contentModerationMessage(raw: string) {

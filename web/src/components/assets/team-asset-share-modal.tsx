@@ -6,6 +6,7 @@ import { AppModal } from "@/components/ui/product/app-modal";
 import { teamKeys } from "@/lib/team-query-keys";
 import { listTeams, type TeamAssetPublicationResult } from "@/services/api/teams";
 import { createPersonalAssetPublication } from "@/services/team-asset-publication";
+import { createClientUUID } from "@/lib/client-id";
 import { useUserStore } from "@/stores/use-user-store";
 
 export function TeamAssetShareModal({ assetIds, onClose }: { assetIds: readonly string[]; onClose: () => void }) {
@@ -19,7 +20,7 @@ export function TeamAssetShareModal({ assetIds, onClose }: { assetIds: readonly 
     const publish = useMutation({
         mutationFn: async () => {
             if (!teamId) throw new Error("请选择目标团队");
-            operation.current ??= createPersonalAssetPublication(teamId, remainingIds, crypto.randomUUID());
+            operation.current ??= createPersonalAssetPublication(teamId, remainingIds, createClientUUID());
             return operation.current();
         },
         onSuccess: async (next) => {
